@@ -13,130 +13,92 @@
 :root{
   --schotter:#1b1d1e;--schotter-2:#26292b;--schotter-3:#34383b;
   --kies:#8b9094;--kalk:#e8e6e1;--line:#414548;
-  --warn:#ff8a00;--signal:#e0243b;--rost:#8c4b28;--gruen:#3fa34d;
-  --m-info:#f2c200;--m-mittel:#ff7a1a;--m-schwer:#e0243b;
-  --stahl:#6f7679;
+  --warn:#ff8a00;--signal:#e0243b;--rost:#8c4b28;--gruen:#3fa34d;--stahl:#6f7679;
+  --schleifen:#f2c200;--schweissen:#ff7a1a;--fraesen:#00b4d8;--erneuern:#e0243b;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
 body{background:var(--schotter);color:var(--kalk);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:16px;padding-bottom:env(safe-area-inset-bottom);overscroll-behavior-y:contain}
 h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;margin:0}
-.mono{font-family:'IBM Plex Mono',monospace}
-button{font-family:inherit;font-size:1rem;border:0;cursor:pointer;color:inherit}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+button{font-family:inherit;border:0;cursor:pointer;color:inherit}
+button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
 
-header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bottom:2px solid var(--line);padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:10px}
-.logo{font-family:'Oswald';font-weight:700;font-size:1.05rem;letter-spacing:.1em}
+header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bottom:2px solid var(--line);padding:calc(env(safe-area-inset-top) + 9px) 14px 9px;display:flex;align-items:center;gap:10px}
+.logo{font-family:'Oswald';font-weight:700;font-size:.98rem;letter-spacing:.1em}
 .logo em{color:var(--warn);font-style:normal}
-.gps{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:.72rem;letter-spacing:.08em;font-family:'IBM Plex Mono';color:var(--kies)}
+.gps{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:.7rem;letter-spacing:.08em;font-family:'IBM Plex Mono';color:var(--kies)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--kies);flex:none}
 .dot.on{background:var(--gruen);animation:p 2s infinite}
 .dot.bad{background:var(--signal)}
 @keyframes p{0%{box-shadow:0 0 0 0 rgba(63,163,77,.7)}70%{box-shadow:0 0 0 9px rgba(63,163,77,0)}100%{box-shadow:0 0 0 0 rgba(63,163,77,0)}}
 @media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
 
-.meter{padding:22px 14px 16px;text-align:center;background:repeating-linear-gradient(90deg,transparent 0 26px,rgba(255,255,255,.035) 26px 30px),var(--schotter);border-bottom:2px solid var(--line)}
-.meter .lab{font-family:'Oswald';font-size:.74rem;letter-spacing:.22em;color:var(--kies)}
-.meter .val{font-family:'IBM Plex Mono';font-weight:700;font-size:clamp(3.6rem,19vw,6rem);line-height:.92;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin:4px 0 2px}
-.meter .val small{font-size:.26em;color:var(--warn);letter-spacing:0;margin-left:.15em}
-.meter .sub{font-family:'IBM Plex Mono';font-size:.76rem;color:var(--kies)}
+.meter{padding:16px 14px 12px;text-align:center;background:repeating-linear-gradient(90deg,transparent 0 26px,rgba(255,255,255,.035) 26px 30px),var(--schotter);border-bottom:2px solid var(--line)}
+.meter .lab{font-family:'Oswald';font-size:.68rem;letter-spacing:.2em;color:var(--kies)}
+.meter .val{font-family:'IBM Plex Mono';font-weight:700;font-size:clamp(2.8rem,15vw,4.4rem);line-height:.94;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin:2px 0}
+.meter .val small{font-size:.26em;color:var(--warn);margin-left:.15em}
+.meter .sub{font-family:'IBM Plex Mono';font-size:.72rem;color:var(--kies)}
+.meter .sub2{font-family:'IBM Plex Mono';font-size:.66rem;color:#5f6468;margin-top:2px}
 .meter.idle .val{color:var(--schotter-3)}
 
-.bar{display:grid;grid-template-columns:1.2fr 1.2fr .9fr .7fr;gap:2px;background:var(--line)}
-.bar .done{background:var(--kies);color:#15171a}
-.bar button{padding:15px 3px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.03em;font-size:.74rem;font-weight:600}
+.bar{display:grid;grid-template-columns:1.1fr 1.1fr .8fr .6fr;gap:2px;background:var(--line)}
+.bar button{padding:13px 3px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.03em;font-size:.72rem;font-weight:600}
 .bar button:active{background:var(--schotter-3)}
 .bar .start{background:var(--gruen);color:#0d1a0f}
 .bar .stop{background:var(--rost)}
+.bar .done{background:var(--kies);color:#15171a}
 .bar button:disabled{color:#5a5f63}
 
-/* ---------- Gleis-Visualisierung (Signature) ---------- */
+/* ===== Erfassungstasten ===== */
+.pad{display:grid;grid-template-columns:1fr auto 1fr;gap:0;background:var(--schotter);border-bottom:2px solid var(--line);padding:10px 10px 12px}
+.pad.off{opacity:.35;pointer-events:none}
+.pcol{display:flex;flex-direction:column;gap:5px}
+.pmid{width:26px;display:flex;align-items:center;justify-content:center}
+.pmid span{font-family:'Oswald';font-size:.58rem;letter-spacing:.2em;color:#5f6468;writing-mode:vertical-rl}
+.phead{font-family:'Oswald';font-size:.66rem;letter-spacing:.18em;color:var(--kies);text-align:center;padding-bottom:4px}
+.fb{position:relative;padding:11px 6px;background:var(--schotter-2);border:1px solid var(--line);border-left:4px solid var(--c);font-family:'Oswald';font-size:.76rem;letter-spacing:.02em;text-align:left;line-height:1.15;min-height:44px;display:flex;align-items:center}
+.fb:active{background:var(--schotter-3)}
+.fb .cnt{position:absolute;top:3px;right:4px;font-family:'IBM Plex Mono';font-size:.58rem;color:#5f6468}
+.fb.run{background:var(--c);color:#15171a;border-color:var(--c);font-weight:700}
+.fb.run::after{content:'';position:absolute;left:4px;top:50%;width:5px;height:5px;border-radius:50%;background:#15171a;transform:translateY(-50%);animation:bl 1.2s infinite}
+@keyframes bl{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.fb.run::after{animation:none}}
+
 .track-wrap{background:var(--schotter);border-bottom:2px solid var(--line)}
-.track-head{display:flex;align-items:center;padding:12px 14px 6px;gap:10px}
-.track-head h3{font-size:.78rem;letter-spacing:.2em;color:var(--kies)}
-.legend{margin-left:auto;display:flex;gap:9px;font-family:'IBM Plex Mono';font-size:.58rem;color:var(--kies);align-items:center}
+.track-head{display:flex;align-items:center;padding:11px 14px 5px;gap:10px;flex-wrap:wrap}
+.track-head h3{font-size:.74rem;letter-spacing:.2em;color:var(--kies)}
+.legend{margin-left:auto;display:flex;gap:8px;font-family:'IBM Plex Mono';font-size:.56rem;color:var(--kies);align-items:center;flex-wrap:wrap}
 .legend i{width:8px;height:8px;display:inline-block;margin-right:3px;vertical-align:-1px}
-.track-scroll{overflow-x:auto;overflow-y:hidden;padding:0 14px 14px}
+.track-scroll{overflow-x:auto;padding:0 14px 12px}
 #track{display:block;min-width:100%}
 .rail-lbl{font-family:'Oswald';font-size:9px;letter-spacing:.14em;fill:var(--kies)}
 .tick-lbl{font-family:'IBM Plex Mono';font-size:8px;fill:#5f6468}
-.mk{cursor:pointer}
-.mk-lbl{font-family:'IBM Plex Mono';font-size:8.5px;font-weight:700;fill:var(--kalk)}
-.rail-stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--line);margin:0 14px 12px}
-.rail-stat div{background:var(--schotter-2);padding:9px 8px;text-align:center}
-.rail-stat b{display:block;font-family:'IBM Plex Mono';font-weight:700;font-size:1.25rem;font-variant-numeric:tabular-nums}
-.rail-stat span{font-family:'Oswald';font-size:.56rem;letter-spacing:.13em;color:var(--kies)}
 .joint-lbl{font-family:'IBM Plex Mono';font-size:7.5px;fill:#6f7679}
-.track-empty{padding:30px 14px 34px;text-align:center;color:#5f6468;font-family:'Oswald';font-size:.8rem;letter-spacing:.12em}
+.mk{cursor:pointer}
+.mk-lbl{font-family:'IBM Plex Mono';font-size:8px;font-weight:700}
+.track-empty{padding:28px 14px 32px;text-align:center;color:#5f6468;font-family:'Oswald';font-size:.78rem;letter-spacing:.12em}
 
-main{padding:14px 14px 96px}
-.empty{border:2px dashed var(--line);padding:30px 18px;text-align:center;color:var(--kies);font-size:.9rem;line-height:1.6}
-.empty b{display:block;font-family:'Oswald';color:var(--kalk);font-size:1.05rem;margin-bottom:6px;letter-spacing:.05em}
-.card{background:var(--schotter-2);border-left:5px solid var(--m-info);margin-bottom:10px;padding:12px 13px;display:flex;gap:12px;align-items:flex-start}
-.card.g2{border-left-color:var(--m-mittel)}
-.card.g3{border-left-color:var(--m-schwer)}
-.card .km{font-family:'IBM Plex Mono';font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums;flex:none;min-width:82px}
-.card .km i{display:block;font-style:normal;font-size:.58rem;color:var(--kies);letter-spacing:.09em;font-family:'Oswald';margin-top:1px}
+.rail-stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--line);margin:0 14px 12px}
+.rail-stat div{background:var(--schotter-2);padding:8px 6px;text-align:center}
+.rail-stat b{display:block;font-family:'IBM Plex Mono';font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.rail-stat span{font-family:'Oswald';font-size:.54rem;letter-spacing:.12em;color:var(--kies)}
+
+main{padding:12px 14px 30px}
+.empty{border:2px dashed var(--line);padding:26px 18px;text-align:center;color:var(--kies);font-size:.86rem;line-height:1.6}
+.empty b{display:block;font-family:'Oswald';color:var(--kalk);font-size:1rem;margin-bottom:6px;letter-spacing:.05em}
+.sec{font-family:'Oswald';font-size:.68rem;letter-spacing:.18em;color:var(--kies);margin:16px 0 8px}
+.card{background:var(--schotter-2);border-left:5px solid var(--c);margin-bottom:7px;padding:10px 11px;display:flex;gap:11px;align-items:center}
+.card .km{font-family:'IBM Plex Mono';font-weight:700;font-size:1.02rem;font-variant-numeric:tabular-nums;flex:none;min-width:78px}
+.card .km i{display:block;font-style:normal;font-size:.54rem;color:var(--kies);letter-spacing:.09em;font-family:'Oswald';margin-top:1px}
 .card .bd{flex:1;min-width:0}
-.card .t{font-family:'Oswald';font-size:1rem;letter-spacing:.03em}
-.card .m{font-size:.8rem;color:var(--kies);margin-top:3px;word-break:break-word}
-.card .tags{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap}
-.tag{font-family:'IBM Plex Mono';font-size:.62rem;padding:3px 6px;background:var(--schotter-3);letter-spacing:.05em}
-.card img{width:52px;height:52px;object-fit:cover;flex:none}
-.card .del{background:none;color:#5f6468;font-size:1.4rem;line-height:1;padding:2px 4px;flex:none}
+.card .t{font-family:'Oswald';font-size:.92rem;letter-spacing:.03em}
+.card .tags{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-family:'IBM Plex Mono';font-size:.6rem;padding:2px 5px;background:var(--schotter-3);letter-spacing:.04em}
+.card .del{background:none;color:#5f6468;font-size:1.3rem;line-height:1;padding:2px 4px;flex:none}
+.rw{background:var(--schotter-2);border-left:5px solid var(--erneuern);padding:9px 11px;margin-bottom:7px;font-size:.82rem;line-height:1.4}
+.rw b{font-family:'Oswald';letter-spacing:.04em}
 
-.open-bar{position:sticky;top:calc(env(safe-area-inset-top) + 52px);z-index:28;display:none;flex-direction:column;gap:4px;padding:8px 14px;background:var(--schotter);border-bottom:2px solid var(--warn);box-shadow:0 6px 18px rgba(0,0,0,.5)}
-.open-bar.show{display:flex}
-.ob{display:flex;align-items:center;gap:10px;background:var(--schotter-2);border-left:5px solid var(--warn);padding:9px 10px}
-.ob .pulse{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;animation:ob 1.4s infinite}
-@keyframes ob{50%{opacity:.25}}
-@media (prefers-reduced-motion:reduce){.ob .pulse{animation:none}}
-.ob .txt{flex:1;min-width:0;line-height:1.25}
-.ob .n{font-family:'Oswald';font-size:.82rem;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ob .d{font-family:'IBM Plex Mono';font-size:.66rem;color:var(--kies)}
-.ob .fin{background:var(--gruen);color:#0d1a0f;font-family:'Oswald';font-weight:600;font-size:.76rem;letter-spacing:.05em;padding:10px 11px;white-space:nowrap}
-.ob .kill{background:none;color:#5f6468;font-size:1.25rem;line-height:1;padding:2px 3px}
-.mk-open{stroke-dasharray:5 4}
-.fab{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);z-index:30;padding:18px;background:var(--signal);color:#fff;font-family:'Oswald';font-weight:700;font-size:1.12rem;text-transform:uppercase;letter-spacing:.09em;box-shadow:0 8px 26px rgba(0,0,0,.5)}
-.fab:disabled{background:var(--schotter-3);color:#63686c;box-shadow:none}
-
-.sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.72);display:none}
-.sheet.open{display:block}
-.sheet-in{position:absolute;left:0;right:0;bottom:0;max-height:94vh;overflow-y:auto;background:var(--schotter);border-top:3px solid var(--warn);padding:16px 14px calc(env(safe-area-inset-bottom) + 16px)}
-.sheet h2{font-size:1.2rem;margin-bottom:2px}
-.sheet .pos{font-family:'IBM Plex Mono';color:var(--warn);font-size:.85rem;margin-bottom:14px}
-label{display:block;font-family:'Oswald';font-size:.72rem;letter-spacing:.18em;color:var(--kies);margin:15px 0 7px}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{padding:11px 12px;background:var(--schotter-2);border:1px solid var(--line);font-size:.85rem}
-.chip.on{background:var(--warn);color:#241300;border-color:var(--warn);font-weight:600}
-.chip.side{flex:1;text-align:center;font-family:'Oswald';letter-spacing:.06em}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-#acts .chip.on[data-c="1"]{background:var(--m-info);color:#231d00;border-color:var(--m-info)}
-#acts .chip.on[data-c="2"]{background:var(--m-mittel);color:#241000;border-color:var(--m-mittel)}
-#acts .chip.on[data-c="3"]{background:var(--m-schwer);color:#fff;border-color:var(--m-schwer)}
-.sev{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-#sev .chip.on[data-v="1"]{background:var(--kies);color:#111;border-color:var(--kies)}
-#sev .chip.on[data-v="3"]{background:var(--signal);color:#fff;border-color:var(--signal)}
-textarea,input[type=text],input[type=number]{width:100%;background:var(--schotter-2);border:1px solid var(--line);color:var(--kalk);padding:12px;font-family:inherit;font-size:1rem;resize:vertical}
-textarea{min-height:80px}
-input[type=number]{font-family:'IBM Plex Mono'}
-.len-box{background:var(--schotter-2);border:1px solid var(--line);padding:12px;margin-top:8px}
-.len-row{display:flex;gap:8px;align-items:center}
-.len-row input{flex:1}
-.len-row button{background:var(--warn);color:#241300;font-family:'Oswald';letter-spacing:.05em;font-weight:600;padding:12px 14px;white-space:nowrap}
-.len-live{font-family:'IBM Plex Mono';font-size:.78rem;color:var(--warn);margin-top:8px}
-.photo{display:block;border:2px dashed var(--line);padding:20px;text-align:center;color:var(--kies);font-family:'Oswald';letter-spacing:.08em;font-size:.85rem}
-.photo input{display:none}
-.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.thumbs div{position:relative}
-.thumbs img{width:66px;height:66px;object-fit:cover;display:block}
-.thumbs button{position:absolute;top:0;right:0;background:var(--signal);color:#fff;width:20px;height:20px;font-size:.8rem;line-height:1}
-.acts-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px}
-.acts-row button{padding:16px;font-family:'Oswald';text-transform:uppercase;letter-spacing:.07em;font-weight:600}
-.acts-row .ok{background:var(--gruen);color:#0d1a0f}
-.acts-row .no{background:var(--schotter-2);border:1px solid var(--line)}
-.hint{font-size:.72rem;color:var(--kies);margin-top:6px;line-height:1.5}
-.toast{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 86px);background:var(--kalk);color:var(--schotter);padding:13px;font-family:'Oswald';letter-spacing:.05em;text-align:center;z-index:50;transform:translateY(140%);transition:transform .25s}
+.toast{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);background:var(--kalk);color:var(--schotter);padding:12px;font-family:'Oswald';letter-spacing:.05em;text-align:center;z-index:50;transform:translateY(140%);transition:transform .25s}
 .toast.show{transform:none}
 </style>
 </head>
@@ -149,139 +111,81 @@ input[type=number]{font-family:'IBM Plex Mono'}
 
 <section class="meter idle" id="meter">
   <div class="lab">Gelaufene Strecke</div>
-  <div class="val mono" id="dist">–<small>m</small></div>
+  <div class="val" id="dist">–<small>m</small></div>
   <div class="sub" id="msub">Inspektion nicht gestartet</div>
-  <div class="sub" id="mair" style="margin-top:3px;color:#5f6468"></div>
+  <div class="sub2" id="mair"></div>
 </section>
-
-<div class="open-bar" id="openBar"></div>
 
 <div class="bar">
   <button class="start" id="bStart">Start setzen</button>
-  <button id="bPdf" disabled>PDF</button>
   <button id="bEndPt" disabled>Ende setzen</button>
+  <button id="bPdf" disabled>PDF</button>
   <button id="bZoom">1:1</button>
 </div>
+
+<section class="pad off" id="pad">
+  <div class="pcol" id="padL"></div>
+  <div class="pmid"><span>SCHIENE</span></div>
+  <div class="pcol" id="padR"></div>
+</section>
 
 <section class="track-wrap">
   <div class="track-head">
     <h3>Gleisbild</h3>
     <div class="legend">
-      <span><i style="background:#f2c200"></i>Info</span>
-      <span><i style="background:#ff7a1a"></i>Schleifen/Schweißen</span>
+      <span><i style="background:#f2c200"></i>Schleifen</span>
+      <span><i style="background:#ff7a1a"></i>Schweißen</span>
+      <span><i style="background:#00b4d8"></i>Fräsen</span>
       <span><i style="background:#e0243b"></i>Erneuern</span>
-      <span><i style="background:#8b9094;height:2px"></i>30-m-Stoß</span>
     </div>
   </div>
   <div class="track-scroll" id="tscroll"><svg id="track"></svg></div>
-  <div class="rail-stat" id="railStat" style="display:none">
-    <div><b id="rsLen">0</b><span>Meter Strecke</span></div>
-    <div><b id="rsCnt">0</b><span>Schienen à 30 m</span></div>
-    <div><b id="rsAff">0</b><span>Betroffen</span></div>
-  </div>
   <div class="track-empty" id="tempty">Start setzen, dann erscheint das Gleisbild</div>
+  <div class="rail-stat" id="railStat" style="display:none">
+    <div><b id="rsLen">0</b><span>Meter</span></div>
+    <div><b id="rsCnt">0</b><span>Felder à 30 m</span></div>
+    <div><b id="rsAff">0</b><span>Mit Befund</span></div>
+  </div>
 </section>
 
 <main>
   <div class="empty" id="empty">
     <b>Noch keine Befunde</b>
-    Start am Streckenanfang setzen, dann loslaufen.<br>Der Zähler misst die gelaufene Strecke entlang des Gleises.
+    Start setzen, dann über die Tasten oben Fehler auf die aktuelle Meterzahl setzen.
   </div>
-  <div id="list"></div>
+  <div id="out"></div>
 </main>
-
-<button class="fab" id="bAdd" disabled>+ Befund erfassen</button>
-
-<div class="sheet" id="sheet">
-  <div class="sheet-in">
-    <h2 id="sheetTitle">Befund erfassen</h2>
-    <div class="pos mono" id="sheetPos">–</div>
-
-    <label>Fehlerart</label>
-    <div class="chips" id="kinds"></div>
-
-    <label>Seite</label>
-    <div class="chips">
-      <button class="chip side" data-side="links">Links</button>
-      <button class="chip side" data-side="rechts">Rechts</button>
-      <button class="chip side" data-side="beide">Beide</button>
-    </div>
-
-    <label>Ausdehnung</label>
-    <div class="chips" id="ext">
-      <button class="chip side" data-e="punkt">Punktuell</button>
-      <button class="chip side" data-e="laufend">Mangel beginnt hier</button>
-      <button class="chip side" data-e="bereich">Länge bekannt</button>
-    </div>
-    <div class="len-box" id="runBox" style="display:none">
-      <div class="len-live" style="color:var(--kalk)">Der Mangel bleibt offen. Am Ende des Mangels tippst du unten auf „Ende“ – die Länge wird dann aus dem Zähler übernommen.</div>
-    </div>
-    <div class="len-box" id="lenBox" style="display:none">
-      <div class="len-row">
-        <input type="number" id="lenVal" min="0" step="0.5" placeholder="Länge in Meter" inputmode="decimal">
-        <button id="bEnd">Ende hier</button>
-      </div>
-      <div class="len-live" id="lenLive">Bis ans Ende des Fehlers laufen, dann „Ende hier“ tippen – oder Länge direkt eintragen.</div>
-    </div>
-
-    <label>Schweregrad</label>
-    <div class="sev" id="sev">
-      <button class="chip" data-v="1">Gering</button>
-      <button class="chip" data-v="2">Mittel</button>
-      <button class="chip" data-v="3">Kritisch</button>
-    </div>
-
-    <label>Maßnahme</label>
-    <div class="g2" id="acts"></div>
-    <input type="text" id="actFree" placeholder="Maßnahme frei eingeben" style="margin-top:7px;display:none">
-
-    <label>Notiz</label>
-    <textarea id="note" placeholder="Beschreibung des Befunds"></textarea>
-
-    <label>Fotos</label>
-    <label class="photo">Foto aufnehmen oder wählen
-      <input type="file" id="pic" accept="image/*" capture="environment" multiple>
-    </label>
-    <div class="thumbs" id="thumbs"></div>
-
-    <div class="acts-row">
-      <button class="no" id="bCancel">Verwerfen</button>
-      <button class="ok" id="bSave">Befund sichern</button>
-    </div>
-    <p class="hint">Position wird beim Öffnen festgehalten, nicht beim Sichern. Du kannst in Ruhe ausfüllen.</p>
-  </div>
-</div>
 
 <input type="file" id="startPic" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
 <div class="toast" id="toast"></div>
 
 <script>
-const KINDS=['Fahrflächenfehler','Seitenverschleiß','Squats','Riffelbildung','Schienenbruch','Head Checks','Ausbröckelung','Schweißnahtfehler'];
-// c = Farbklasse der Maßnahme: 1 gelb, 2 orange, 3 rot
-const ACTS=[
-  {n:'Nur Info',c:1},
-  {n:'Schleifen',c:2},
-  {n:'Schweißen',c:2},
-  {n:'Schiene erneuern',c:3},
-  {n:'Schwelle erneuern',c:3},
-  {n:'Gleis erneuern',c:3},
-  {n:'Freitext',c:1}
+/* ===== Fehlerarten =====
+   mode 'p' = punktuell, 'r' = Bereich (Start/Ende)
+   fix     = automatische Beseitigungsart                          */
+const TYPES=[
+  {id:'ff',  n:'Fahrflächenfehler', mode:'p', fix:'Schleifen',  c:'#f2c200'},
+  {id:'sq',  n:'Squat',             mode:'p', fix:'Schweißen',  c:'#ff7a1a'},
+  {id:'rif', n:'Riffelbildung',     mode:'r', fix:'Fräsen',     c:'#00b4d8'},
+  {id:'hc',  n:'Head Checks',       mode:'r', fix:'Fräsen',     c:'#00b4d8'}
 ];
-const COL={1:'#f2c200',2:'#ff7a1a',3:'#e0243b'};
+const T=id=>TYPES.find(t=>t.id===id);
+const RAIL=30, SQUAT_LIMIT=6, ERNEUERN='Schiene erneuern', C_ERN='#e0243b';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-let watchId=null,start=null,last=null,dist=0,acc=null,cur=null,pending=[],zoom=1;
+let watchId=null,start=null,last=null,dist=0,acc=null,cur=null,back=false,zoom=1;
 let startPhoto=null,startTs=null,endPt=null,endTs=null,endDist=null;
-const RAIL=30;
-let back=false;
 const ZOOMS=[1,2,.5,.25];let zi=0;
-let findings=JSON.parse(localStorage.getItem('gi_f')||'[]');
-let openF=JSON.parse(localStorage.getItem('gi_o')||'[]');
-let route=JSON.parse(localStorage.getItem('gi_r')||'null');
-if(route){start=route.start;dist=route.dist;last=route.last;startPhoto=route.photo||null;startTs=route.ts||null;
-  endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;}
+let marks=JSON.parse(localStorage.getItem('gi2_m')||'[]');   // {type,side,dist,len,ts}
+let open=JSON.parse(localStorage.getItem('gi2_o')||'[]');    // {key,type,side,dist,ts}
+let route=JSON.parse(localStorage.getItem('gi2_r')||'null');
+if(route){start=route.start;dist=route.dist;last=route.last;startPhoto=route.photo||null;
+  startTs=route.ts||null;endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;}
 const MIN_MOVE=5,MAX_ACC=25;
+const closed=()=>!!endPt;
+const railNo=m=>Math.floor(m/RAIL)+1;
+const keyOf=(t,s)=>t+'|'+s;
 
 function hav(a,b){
   const R=6371000,t=Math.PI/180;
@@ -289,13 +193,13 @@ function hav(a,b){
   const x=Math.sin(df/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dl/2)**2;
   return 2*R*Math.asin(Math.sqrt(x));
 }
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
-function save(){localStorage.setItem('gi_f',JSON.stringify(findings));localStorage.setItem('gi_o',JSON.stringify(openF));const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
-  localStorage.setItem('gi_r',JSON.stringify(r));route=r;}
-const closed=()=>!!endPt;
-const railNo=m=>Math.floor(m/RAIL)+1;
-const actColor=n=>(ACTS.find(a=>a.n===n)||{c:1}).c;
-
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2400);}
+function save(){
+  localStorage.setItem('gi2_m',JSON.stringify(marks));
+  localStorage.setItem('gi2_o',JSON.stringify(open));
+  const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
+  localStorage.setItem('gi2_r',JSON.stringify(r));route=r;
+}
 function shrink(file,max,q){
   return new Promise((res,rej)=>{
     const r=new FileReader();
@@ -309,11 +213,34 @@ function shrink(file,max,q){
         c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
         res(c.toDataURL('image/jpeg',q));
-      };
-      img.src=r.result;
-    };
-    r.readAsDataURL(file);
+      };img.src=r.result;
+    };r.readAsDataURL(file);
   });
+}
+
+/* ===== Auswertung: Squat-Regel pro Schiene & Feld ===== */
+function analyse(){
+  const total=closed()?endDist:dist;
+  const nR=Math.max(1,Math.ceil(total/RAIL));
+  // Squats pro Feld/Seite zaehlen
+  const sq={};
+  marks.filter(m=>m.type==='sq').forEach(m=>{
+    const k=railNo(m.dist)+'|'+m.side;
+    sq[k]=(sq[k]||0)+1;
+  });
+  const renew=new Set();
+  Object.entries(sq).forEach(([k,n])=>{if(n>=SQUAT_LIMIT)renew.add(k);});
+  // jeder Mangel bekommt seine Beseitigungsart
+  const rows=marks.map(m=>{
+    const t=T(m.type);
+    const a=railNo(m.dist),b=railNo(m.dist+(m.len||0));
+    let fix=t.fix,col=t.c,over=false;
+    for(let r=a;r<=b;r++){
+      if(renew.has(r+'|'+m.side)){fix=ERNEUERN;col=C_ERN;over=true;break;}
+    }
+    return {...m,name:t.n,fix,col,over,r0:a,r1:b};
+  });
+  return {total,nR,renew,sq,rows};
 }
 
 function gps(){
@@ -325,84 +252,109 @@ function gps(){
     if(start&&last&&!closed()&&acc<=MAX_ACC){
       const d=hav(last,cur);
       if(d>=MIN_MOVE){
-        // Richtung: naehert sich der Punkt dem Start oder entfernt er sich?
-        const wasAir=hav(start,last), nowAir=hav(start,cur);
-        if(nowAir<wasAir-1){
-          // Rueckwaerts: Strecke wieder abziehen, nicht dazu
-          dist=Math.max(0,dist-d);
-          back=true;
-        }else{
-          dist+=d;back=false;
-        }
+        const wasAir=hav(start,last),nowAir=hav(start,cur);
+        if(nowAir<wasAir-1){dist=Math.max(0,dist-d);back=true;}
+        else{dist+=d;back=false;}
         last=cur;save();
       }
     }
     render();
-    if($('#sheet').classList.contains('open'))liveLen();
   },e=>{
     $('#acc').textContent='Fehler';$('#dot').className='dot bad';
     if(e.code===1)toast('Standortzugriff abgelehnt');
-    else if(location.protocol!=='https:'&&location.hostname!=='localhost')toast('GPS braucht HTTPS – über Webserver öffnen');
+    else if(location.protocol!=='https:'&&location.hostname!=='localhost')toast('GPS braucht HTTPS');
   },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
 }
 
-/* ---------- Gleisbild ---------- */
+/* ===== Tastenfeld ===== */
+function buildPad(){
+  ['links','rechts'].forEach(side=>{
+    const col=$(side==='links'?'#padL':'#padR');
+    col.innerHTML='<div class="phead">'+side.toUpperCase()+'</div>'+
+      TYPES.map(t=>`<button class="fb" data-t="${t.id}" data-s="${side}" style="--c:${t.c}">
+        <span class="lbl"></span><span class="cnt"></span></button>`).join('');
+  });
+  document.querySelectorAll('.fb').forEach(b=>b.onclick=()=>hit(b.dataset.t,b.dataset.s));
+}
+function padState(){
+  $('#pad').className='pad'+(start&&!closed()?'':' off');
+  document.querySelectorAll('.fb').forEach(b=>{
+    const t=T(b.dataset.t),side=b.dataset.s;
+    const run=open.find(o=>o.key===keyOf(t.id,side));
+    const n=marks.filter(m=>m.type===t.id&&m.side===side).length;
+    b.classList.toggle('run',!!run);
+    b.querySelector('.lbl').textContent=t.mode==='p'?t.n:(run?t.n+' Ende':t.n+' Start');
+    b.querySelector('.cnt').textContent=run?Math.max(0,dist-run.dist).toFixed(0)+'m':(n||'');
+  });
+}
+function hit(tid,side){
+  if(!start||closed())return;
+  if(!cur){toast('Kein GPS-Fix');return;}
+  const t=T(tid),k=keyOf(tid,side);
+  if(t.mode==='p'){
+    marks.push({type:tid,side,dist,len:0,ts:new Date().toISOString()});
+    marks.sort((a,b)=>a.dist-b.dist);save();render();
+    toast(t.n+' · '+side+' · '+Math.round(dist)+' m');
+    return;
+  }
+  const run=open.find(o=>o.key===k);
+  if(!run){
+    open.push({key:k,type:tid,side,dist,ts:new Date().toISOString()});
+    save();render();toast(t.n+' offen ab '+Math.round(dist)+' m');
+  }else{
+    const len=dist-run.dist;
+    if(len<1){toast('Noch keine Strecke seit Beginn');return;}
+    open=open.filter(o=>o.key!==k);
+    marks.push({type:tid,side,dist:run.dist,len,ts:run.ts,tsEnd:new Date().toISOString()});
+    marks.sort((a,b)=>a.dist-b.dist);save();render();
+    toast(t.n+' · '+len.toFixed(0)+' m · '+side);
+  }
+}
+
+/* ===== Gleisbild ===== */
 function drawTrack(){
   const svg=$('#track');
-  if(!start){$('#tempty').style.display='block';svg.style.display='none';return;}
-  $('#tempty').style.display='none';svg.style.display='block';
+  if(!start){$('#tempty').style.display='block';svg.style.display='none';$('#railStat').style.display='none';return;}
+  $('#tempty').style.display='none';svg.style.display='block';$('#railStat').style.display='grid';
 
+  const {total,nR,renew,rows}=analyse();
   const W=$('#tscroll').clientWidth-28||320;
-  const PAD_T=28,PAD_B=26;
-  const total=closed()?endDist:dist;
-  const span=Math.max(total,...findings.map(f=>f.dist+(f.len||0)),...openF.map(o=>o.dist),RAIL);
-  const H=Math.max(320,Math.min(2800,span*1.6*zoom+PAD_T+PAD_B));
-  const cx=W/2,gauge=Math.min(88,W*0.30);
+  const PAD_T=26,PAD_B=24;
+  const span=Math.max(total,...rows.map(m=>m.dist+(m.len||0)),...open.map(o=>o.dist),RAIL);
+  const H=Math.max(300,Math.min(2800,span*1.7*zoom+PAD_T+PAD_B));
+  const cx=W/2,gauge=Math.min(86,W*0.30);
   const xL=cx-gauge/2,xR=cx+gauge/2;
   const y=m=>PAD_T+(m/span)*(H-PAD_T-PAD_B);
-  const nRails=Math.max(1,Math.ceil(span/RAIL));
+  const nF=Math.max(1,Math.ceil(span/RAIL));
 
-  // welche Schienen sind betroffen
-  const aff={};
-  [...findings,...openF.map(o=>({...o,len:Math.max(0,dist-o.dist)}))].forEach(f=>{
-    const a=railNo(f.dist),b=railNo(f.dist+(f.len||0));
-    const c=actColor(f.act);
-    for(let r=a;r<=b;r++)aff[r]=Math.max(aff[r]||0,c);
-  });
+  // Feldfarbe = schaerfste Massnahme im Feld
+  const rank={'Schleifen':1,'Fräsen':2,'Schweißen':3,[ERNEUERN]:4};
+  const fld={};
+  rows.forEach(m=>{for(let r=m.r0;r<=m.r1;r++){
+    if(!fld[r]||rank[m.fix]>rank[fld[r].fix])fld[r]={fix:m.fix,col:m.col};
+  }});
 
-  // Schwellen
   let sl='';
   const step=Math.max(2,Math.round(span/70));
   for(let m=0;m<=span;m+=step)
     sl+=`<line x1="${xL-13}" y1="${y(m)}" x2="${xR+13}" y2="${y(m)}" stroke="#3a3d3f" stroke-width="3"/>`;
 
-  // 30-m-Stoesse + Schienenfelder
   let jt='';
-  for(let r=1;r<=nRails;r++){
-    const m0=(r-1)*RAIL, m1=Math.min(r*RAIL,span);
-    const y0=y(m0),y1=y(m1);
-    if(aff[r]){
-      jt+=`<rect x="${xL-15}" y="${y0}" width="${gauge+30}" height="${Math.max(1,y1-y0)}" fill="${COL[aff[r]]}" opacity=".07"/>`;
-    }
-    // Stossmarke
-    const yj=y(m0);
-    jt+=`<line x1="${xL-19}" y1="${yj}" x2="${xL+7}" y2="${yj}" stroke="#8b9094" stroke-width="2"/>
-         <line x1="${xR-7}" y1="${yj}" x2="${xR+19}" y2="${yj}" stroke="#8b9094" stroke-width="2"/>`;
-    // Feldnummer mittig
-    const ym=(y0+y1)/2;
-    if(y1-y0>12)
-      jt+=`<text class="joint-lbl" x="${cx}" y="${ym+3}" text-anchor="middle" fill="${aff[r]?COL[aff[r]]:'#5a5f63'}">R${r}</text>`;
+  for(let r=1;r<=nF;r++){
+    const y0=y((r-1)*RAIL),y1=y(Math.min(r*RAIL,span));
+    if(fld[r])jt+=`<rect x="${xL-15}" y="${y0}" width="${gauge+30}" height="${Math.max(1,y1-y0)}" fill="${fld[r].col}" opacity=".08"/>`;
+    jt+=`<line x1="${xL-19}" y1="${y0}" x2="${xL+7}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>
+         <line x1="${xR-7}" y1="${y0}" x2="${xR+19}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>`;
+    if(y1-y0>12)jt+=`<text class="joint-lbl" x="${cx}" y="${(y0+y1)/2+3}" text-anchor="middle" fill="${fld[r]?fld[r].col:'#5a5f63'}">R${r}</text>`;
   }
-  // letzter Stoss
-  const yLast=y(Math.min(nRails*RAIL,span));
-  jt+=`<line x1="${xL-19}" y1="${yLast}" x2="${xL+7}" y2="${yLast}" stroke="#8b9094" stroke-width="2"/>
-       <line x1="${xR-7}" y1="${yLast}" x2="${xR+19}" y2="${yLast}" stroke="#8b9094" stroke-width="2"/>`;
+  const yE=y(Math.min(nF*RAIL,span));
+  jt+=`<line x1="${xL-19}" y1="${yE}" x2="${xL+7}" y2="${yE}" stroke="#8b9094" stroke-width="2"/>
+       <line x1="${xR-7}" y1="${yE}" x2="${xR+19}" y2="${yE}" stroke="#8b9094" stroke-width="2"/>`;
 
-  // Meterskala
   let tk='';
   const ts=span<=60?10:span<=200?30:span<=600?60:span<=1500?150:300;
   for(let m=0;m<=span;m+=ts)
-    tk+=`<line x1="${xL-26}" y1="${y(m)}" x2="${xL-21}" y2="${y(m)}" stroke="#5f6468" stroke-width="1"/>
+    tk+=`<line x1="${xL-26}" y1="${y(m)}" x2="${xL-21}" y2="${y(m)}" stroke="#5f6468"/>
          <text class="tick-lbl" x="${xL-29}" y="${y(m)+3}" text-anchor="end">${m}</text>`;
 
   const rails=`
@@ -412,43 +364,30 @@ function drawTrack(){
     <line x1="${xR}" y1="${PAD_T}" x2="${xR}" y2="${H-PAD_B}" stroke="#9aa1a4" stroke-width="1.6"/>`;
 
   let fx='';
-  findings.forEach((f,i)=>{
-    const c=COL[actColor(f.act)];
-    const y1=y(f.dist),y2=y(f.dist+(f.len||0));
-    const sides=f.side==='beide'?[xL,xR]:[f.side==='links'?xL:xR];
-    sides.forEach(x=>{
-      if(f.len>0){
-        fx+=`<g class="mk" data-i="${i}">
-          <line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+4)}" stroke="${c}" stroke-width="11" opacity=".92"/>
-          <line x1="${x-9}" y1="${y1}" x2="${x+9}" y2="${y1}" stroke="${c}" stroke-width="2.5"/>
-          <line x1="${x-9}" y1="${Math.max(y2,y1+4)}" x2="${x+9}" y2="${Math.max(y2,y1+4)}" stroke="${c}" stroke-width="2.5"/>
-        </g>`;
-      }else{
-        fx+=`<g class="mk" data-i="${i}"><circle cx="${x}" cy="${y1}" r="7.5" fill="${c}" stroke="var(--schotter)" stroke-width="2"/></g>`;
-      }
-    });
-    const lx=f.side==='rechts'?xR+11:xL-11;
-    fx+=`<text class="mk-lbl" x="${lx}" y="${y1-9}" text-anchor="${f.side==='rechts'?'start':'end'}">#${i+1}${f.len>0?' · '+Math.round(f.len)+'m':''}</text>`;
+  rows.forEach((m,i)=>{
+    const x=m.side==='links'?xL:xR;
+    const y1=y(m.dist),y2=y(m.dist+(m.len||0));
+    if(m.len>0){
+      fx+=`<g class="mk" data-i="${i}">
+        <line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+4)}" stroke="${m.col}" stroke-width="10" opacity=".9"/>
+        <line x1="${x-8}" y1="${y1}" x2="${x+8}" y2="${y1}" stroke="${m.col}" stroke-width="2.5"/>
+        <line x1="${x-8}" y1="${Math.max(y2,y1+4)}" x2="${x+8}" y2="${Math.max(y2,y1+4)}" stroke="${m.col}" stroke-width="2.5"/></g>`;
+    }else{
+      fx+=`<g class="mk" data-i="${i}"><circle cx="${x}" cy="${y1}" r="6.5" fill="${m.col}" stroke="var(--schotter)" stroke-width="1.8"/></g>`;
+    }
   });
-
-  // offene Mängel
-  openF.forEach(o=>{
-    const c=COL[actColor(o.act)];
+  open.forEach(o=>{
+    const t=T(o.type),x=o.side==='links'?xL:xR;
     const y1=y(o.dist),y2=y(Math.min(dist,span));
-    const sides=o.side==='beide'?[xL,xR]:[o.side==='links'?xL:xR];
-    sides.forEach(x=>{
-      fx+=`<line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+3)}" stroke="${c}" stroke-width="11" opacity=".5" class="mk-open"/>
-        <line x1="${x-9}" y1="${y1}" x2="${x+9}" y2="${y1}" stroke="${c}" stroke-width="2.5"/>`;
-    });
-    const lx=o.side==='rechts'?xR+11:xL-11;
-    fx+=`<text class="mk-lbl" x="${lx}" y="${y1-9}" text-anchor="${o.side==='rechts'?'start':'end'}" fill="${c}">OFFEN</text>`;
+    fx+=`<line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+3)}" stroke="${t.c}" stroke-width="10" opacity=".45" stroke-dasharray="5 4"/>
+      <line x1="${x-8}" y1="${y1}" x2="${x+8}" y2="${y1}" stroke="${t.c}" stroke-width="2.5"/>
+      <text class="mk-lbl" x="${o.side==='rechts'?x+11:x-11}" y="${y1-8}" text-anchor="${o.side==='rechts'?'start':'end'}" fill="${t.c}">OFFEN</text>`;
   });
 
-  // Start / Position / Ende
   let mk=`<line x1="${xL-16}" y1="${PAD_T}" x2="${xR+16}" y2="${PAD_T}" stroke="var(--gruen)" stroke-width="3"/>
     <text class="rail-lbl" x="${xR+21}" y="${PAD_T+3}" fill="#3fa34d">START</text>
-    <text class="rail-lbl" x="${xL}" y="14" text-anchor="middle">LINKS</text>
-    <text class="rail-lbl" x="${xR}" y="14" text-anchor="middle">RECHTS</text>`;
+    <text class="rail-lbl" x="${xL}" y="13" text-anchor="middle">LINKS</text>
+    <text class="rail-lbl" x="${xR}" y="13" text-anchor="middle">RECHTS</text>`;
   if(closed()){
     const ye=y(endDist);
     mk+=`<line x1="${xL-16}" y1="${ye}" x2="${xR+16}" y2="${ye}" stroke="var(--signal)" stroke-width="3"/>
@@ -464,111 +403,84 @@ function drawTrack(){
   svg.setAttribute('width',W);svg.setAttribute('height',H);
   svg.innerHTML=sl+jt+tk+rails+fx+mk;
   svg.querySelectorAll('.mk').forEach(g=>g.onclick=()=>{
-    const i=+g.dataset.i,f=findings[i];
-    const a=railNo(f.dist),b=railNo(f.dist+(f.len||0));
-    toast('#'+(i+1)+' · '+(f.kind||'Befund')+' · '+Math.round(f.dist)+' m · Schiene '+(a===b?'R'+a:'R'+a+'–R'+b));
+    const m=rows[+g.dataset.i];
+    toast(m.name+' · '+m.side+' · '+Math.round(m.dist)+' m'+(m.len>0?' ('+Math.round(m.len)+' m)':'')+' → '+m.fix);
   });
+
+  $('#rsLen').textContent=Math.round(total);
+  $('#rsCnt').textContent=nR;
+  $('#rsAff').textContent=Object.keys(fld).length;
+  $('#rsAff').style.color=Object.keys(fld).length?'var(--warn)':'var(--kalk)';
 }
 
 function render(){
   const m=$('#meter');
   if(start){
     m.classList.remove('idle');
-    $('#dist').innerHTML=Math.round(dist)+'<small>m</small>';
     $('#dist').innerHTML=Math.round(closed()?endDist:dist)+'<small>m</small>';
     $('#msub').textContent=closed()
-      ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+findings.length+' Befunde'
-      : (acc?'GPS ±'+Math.round(acc)+' m · '+findings.length+' Befunde':'Warte auf GPS…');
+      ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+marks.length+' Befunde'
+      : (acc?'GPS ±'+Math.round(acc)+' m · '+marks.length+' Befunde':'Warte auf GPS…');
     const air=(start&&cur)?hav(start,cur):0;
     $('#mair').textContent=closed()?'':'Luftlinie zum Start: '+Math.round(air)+' m'+(back?'  ·  rückwärts':'');
   }else{
     m.classList.add('idle');$('#dist').innerHTML='–<small>m</small>';
-    $('#msub').textContent='Inspektion nicht gestartet';
+    $('#msub').textContent='Inspektion nicht gestartet';$('#mair').textContent='';
   }
-  $('#bAdd').disabled=!start||closed();
-  $('#bPdf').disabled=!findings.length&&!start;
+  $('#bPdf').disabled=!start;
   $('#bEndPt').disabled=!start||closed();
-  $('#bEndPt').textContent=closed()?'Abgeschlossen':'Ende setzen';
+  $('#bEndPt').textContent=closed()?'Fertig':'Ende setzen';
   $('#bEndPt').className=closed()?'done':'';
   $('#bStart').textContent=start?'Verwerfen':'Start setzen';
   $('#bStart').className=start?'stop':'start';
-  if(start){
-    const total=closed()?endDist:dist;
-    const need=Math.max(1,Math.ceil(total/RAIL));
-    const aff=new Set();
-    [...findings,...openF.map(o=>({...o,len:Math.max(0,dist-o.dist)}))].forEach(f=>{
-      const a=railNo(f.dist),b=railNo(f.dist+(f.len||0));
-      for(let r=a;r<=b;r++)aff.add(r);
-    });
-    $('#railStat').style.display='grid';
-    $('#rsLen').textContent=Math.round(total);
-    $('#rsCnt').textContent=need;
-    $('#rsAff').textContent=aff.size;
-    $('#rsAff').style.color=aff.size?'var(--warn)':'var(--kalk)';
-  }else $('#railStat').style.display='none';
-  $('#empty').style.display=findings.length?'none':'block';
-  $('#list').innerHTML=findings.map((f,i)=>`
-    <div class="card g${actColor(f.act)}">
-      <div class="km mono">${Math.round(f.dist)}${f.len>0?'–'+Math.round(f.dist+f.len):''}<i>${f.len>0?'METER · '+Math.round(f.len)+' M LANG':'METER'}</i></div>
-      <div class="bd">
-        <div class="t">#${i+1} ${esc(f.kind||'Befund')}</div>
-        ${f.note?`<div class="m">${esc(f.note)}</div>`:''}
-        <div class="tags">
-          <span class="tag">${f.side.toUpperCase()}</span>
-          <span class="tag" style="background:${COL[actColor(f.act)]};color:#1b1d1e;font-weight:700">${esc(f.act)}</span>
-          <span class="tag">±${Math.round(f.acc||0)}m</span>
-        </div>
-      </div>
-      ${f.pics[0]?`<img src="${f.pics[0]}">`:''}
-      <button class="del" data-i="${i}">×</button>
-    </div>`).join('');
+  padState();
   drawTrack();
-  drawOpen();
+  drawOut();
 }
 
-$('#kinds').innerHTML=KINDS.map(k=>`<button class="chip" data-k="${k}">${k}</button>`).join('');
-$('#acts').innerHTML=ACTS.map(a=>`<button class="chip" data-a="${a.n}" data-c="${a.c}">${a.n}</button>`).join('');
-
-function pick(sel,cb){
-  document.querySelectorAll(sel).forEach(b=>b.onclick=()=>{
-    b.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');cb&&cb(b);
+/* ===== Auswertungsliste ===== */
+function drawOut(){
+  const {renew,sq,rows}=analyse();
+  $('#empty').style.display=(marks.length||open.length)?'none':'block';
+  let h='';
+  if(renew.size){
+    h+='<div class="sec">Schienenerneuerung nötig</div>';
+    [...renew].sort().forEach(k=>{
+      const [r,side]=k.split('|');
+      h+=`<div class="rw"><b>Feld R${r} · ${side}</b><br>${sq[k]} Squats auf 30 m → ${ERNEUERN}</div>`;
+    });
+  }
+  if(rows.length){
+    h+='<div class="sec">Befunde ('+rows.length+')</div>';
+    h+=rows.map((m,i)=>`
+      <div class="card" style="--c:${m.col}">
+        <div class="km">${Math.round(m.dist)}${m.len>0?'–'+Math.round(m.dist+m.len):''}<i>${m.len>0?Math.round(m.len)+' M LANG':'PUNKT'}</i></div>
+        <div class="bd">
+          <div class="t">${esc(m.name)}</div>
+          <div class="tags">
+            <span class="tag">${m.side.toUpperCase()}</span>
+            <span class="tag">R${m.r0===m.r1?m.r0:m.r0+'–'+m.r1}</span>
+            <span class="tag" style="background:${m.col};color:#1b1d1e;font-weight:700">${m.fix}${m.over?' ⚠':''}</span>
+          </div>
+        </div>
+        <button class="del" data-d="${i}">×</button>
+      </div>`).join('');
+  }
+  $('#out').innerHTML=h;
+  $('#out').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+    const m=rows[+b.dataset.d];
+    if(!confirm(m.name+' bei '+Math.round(m.dist)+' m löschen?'))return;
+    const j=marks.findIndex(x=>x.ts===m.ts&&x.type===m.type&&x.side===m.side);
+    if(j>-1){marks.splice(j,1);save();render();}
   });
 }
-pick('#kinds .chip',b=>{$('#note').value=b.dataset.k;});
-pick('#acts .chip',b=>{$('#actFree').style.display=b.dataset.a==='Freitext'?'block':'none';});
-pick('.chip.side[data-side]');
-pick('#sev .chip');
-pick('#ext .chip',b=>{
-  const e=b.dataset.e;
-  $('#lenBox').style.display=e==='bereich'?'block':'none';
-  $('#runBox').style.display=e==='laufend'?'block':'none';
-  if(e!=='bereich')$('#lenVal').value='';
-  $('#bSave').textContent=e==='laufend'?'Mangel starten':'Befund sichern';
-  liveLen();
-});
 
-function liveLen(){
-  const box=$('#lenBox');if(box.style.display==='none')return;
-  const d0=+$('#sheet').dataset.d;
-  const now=Math.max(0,dist-d0);
-  $('#lenLive').textContent=$('#lenVal').value
-    ? 'Eingetragen: '+(+$('#lenVal').value)+' m'
-    : 'Seit Befundstart gelaufen: '+now.toFixed(1)+' m — „Ende hier“ übernimmt diesen Wert.';
-}
-$('#lenVal').oninput=liveLen;
-$('#bEnd').onclick=()=>{
-  const d0=+$('#sheet').dataset.d;
-  const l=Math.max(0,dist-d0);
-  if(l<1){toast('Noch keine Strecke gelaufen');return;}
-  $('#lenVal').value=l.toFixed(1);liveLen();toast('Länge: '+l.toFixed(1)+' m');
-};
-
+/* ===== Start / Ende ===== */
 $('#bStart').onclick=()=>{
   if(start){
-    if(!confirm('Inspektion verwerfen? Startpunkt, Endpunkt und Zähler werden gelöscht. Befunde bleiben in der Liste.'))return;
+    if(!confirm('Inspektion verwerfen? Alle Befunde und der Zähler werden gelöscht.'))return;
     start=null;last=null;dist=0;startPhoto=null;startTs=null;
-    endPt=null;endTs=null;endDist=null;openF=[];
+    endPt=null;endTs=null;endDist=null;marks=[];open=[];
     save();render();return;
   }
   if(!cur){toast('Noch kein GPS-Fix – kurz warten');return;}
@@ -576,210 +488,97 @@ $('#bStart').onclick=()=>{
   toast('Startfoto aufnehmen');
   $('#startPic').click();
 };
-
 $('#startPic').onchange=async e=>{
   const f=e.target.files[0];e.target.value='';
   if(!f){toast('Ohne Startfoto kein Start');return;}
-  if(!cur){toast('GPS-Fix verloren – nochmal versuchen');return;}
-  try{
-    startPhoto=await shrink(f,1400,.7);
-  }catch(err){toast('Foto fehlgeschlagen: '+err.message);return;}
+  if(!cur){toast('GPS-Fix verloren');return;}
+  try{startPhoto=await shrink(f,1400,.7);}catch(err){toast('Foto fehlgeschlagen');return;}
   start=cur;last=cur;dist=0;startTs=new Date().toISOString();
-  save();render();toast('Startpunkt gesetzt · Foto gespeichert');
+  save();render();toast('Startpunkt gesetzt');
 };
-
 $('#bEndPt').onclick=()=>{
   if(!start||closed())return;
   if(!cur){toast('Kein GPS-Fix');return;}
-  if(acc>MAX_ACC){toast('GPS zu ungenau (±'+Math.round(acc)+' m)');return;}
-  if(openF.length){toast(openF.length+' Mangel noch offen – erst beenden');return;}
-  if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen? Danach werden keine Befunde mehr erfasst.'))return;
+  if(open.length){toast(open.length+' Mangel noch offen – erst beenden');return;}
+  if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen?'))return;
   endPt=cur;endDist=dist;endTs=new Date().toISOString();
-  save();render();toast('Inspektion abgeschlossen · '+Math.round(endDist)+' m');
+  save();render();toast('Abgeschlossen · '+Math.round(endDist)+' m');
 };
+$('#bZoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;zoom=ZOOMS[zi];
+  $('#bZoom').textContent=zoom>=1?zoom+':1':'1:'+(1/zoom);drawTrack();};
 
-$('#bZoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;zoom=ZOOMS[zi];$('#bZoom').textContent='Zoom '+(zoom>=1?zoom+':1':'1:'+(1/zoom));drawTrack();};
-
-$('#bAdd').onclick=()=>{
-  if(closed()){toast('Inspektion ist abgeschlossen');return;}
-  if(!cur){toast('Kein GPS-Fix');return;}
-  pending=[];$('#thumbs').innerHTML='';$('#note').value='';$('#actFree').value='';
-  $('#actFree').style.display='none';$('#lenVal').value='';$('#lenBox').style.display='none';$('#runBox').style.display='none';$('#bSave').textContent='Befund sichern';
-  document.querySelectorAll('.sheet .chip').forEach(c=>c.classList.remove('on'));
-  document.querySelector('[data-side="links"]').classList.add('on');
-  document.querySelector('[data-e="punkt"]').classList.add('on');
-  document.querySelector('#sev [data-v="2"]').classList.add('on');
-  document.querySelector('#acts [data-a="Nur Info"]').classList.add('on');
-  const s=$('#sheet');
-  s.dataset.d=dist;s.dataset.a=acc||0;s.dataset.lat=cur.lat;s.dataset.lon=cur.lon;
-  $('#sheetPos').textContent='Meter '+Math.round(dist)+' · ±'+Math.round(acc||0)+' m';
-  s.classList.add('open');liveLen();
-};
-
-$('#pic').onchange=async e=>{
-  const fs=[...e.target.files];e.target.value='';
-  for(const f of fs){
-    try{pending.push(await shrink(f,1100,.72));drawThumbs();}
-    catch(err){toast('Foto übersprungen: '+err.message);}
-  }
-};
-
-function drawThumbs(){
-  $('#thumbs').innerHTML=pending.map((p,i)=>`<div><img src="${p}"><button data-p="${i}">×</button></div>`).join('');
-  $('#thumbs').querySelectorAll('button').forEach(b=>b.onclick=()=>{pending.splice(+b.dataset.p,1);drawThumbs();});
-}
-
-$('#bCancel').onclick=()=>$('#sheet').classList.remove('open');
-$('#bSave').onclick=()=>{
-  const g=x=>document.querySelector(x+' .chip.on');
-  let act=g('#acts')?.dataset.a||'Nur Info';
-  if(act==='Freitext'){const t=$('#actFree').value.trim();act=t||'Freitext (leer)';}
-  const s=$('#sheet');
-  const mode=g('#ext')?.dataset.e||'punkt';
-  const rec={
-    dist:+s.dataset.d,acc:+s.dataset.a,lat:+s.dataset.lat,lon:+s.dataset.lon,
-    kind:g('#kinds')?.dataset.k||'',
-    side:document.querySelector('.chip.side[data-side].on')?.dataset.side||'links',
-    sev:+(g('#sev')?.dataset.v||2),
-    act,note:$('#note').value.trim(),pics:pending,ts:new Date().toISOString()
-  };
-
-  if(mode==='laufend'){
-    rec.id=Date.now()+'-'+Math.random().toString(36).slice(2,7);
-    openF.push(rec);
-    save();render();s.classList.remove('open');
-    toast('Mangel offen ab '+Math.round(rec.dist)+' m');
-    return;
-  }
-
-  const len=mode==='bereich'?Math.max(0,+$('#lenVal').value||0):0;
-  if(mode==='bereich'&&!len){toast('Länge fehlt – „Ende hier“ tippen oder eintragen');return;}
-  rec.len=len;
-  findings.push(rec);
-  findings.sort((a,b)=>a.dist-b.dist);
-  save();render();s.classList.remove('open');toast('Befund gesichert');
-};
-
-function drawOpen(){
-  const bar=$('#openBar');
-  const vis=openF.length&&start&&!closed();
-  document.body.classList.toggle('has-open',!!vis);
-  if(!vis){bar.className='open-bar';bar.innerHTML='';return;}
-  bar.className='open-bar show';
-  bar.innerHTML=openF.map(o=>`
-    <div class="ob" style="border-left-color:${COL[actColor(o.act)]}">
-      <span class="pulse" style="background:${COL[actColor(o.act)]}"></span>
-      <div class="txt">
-        <div class="n">${esc(o.kind||'Mangel')} · ${o.side}</div>
-        <div class="d">ab ${Math.round(o.dist)} m · aktuell ${Math.max(0,dist-o.dist).toFixed(0)} m lang</div>
-      </div>
-      <button class="fin" data-fin="${o.id}">Ende</button>
-      <button class="kill" data-kill="${o.id}">×</button>
-    </div>`).join('');
-  bar.querySelectorAll('[data-fin]').forEach(b=>b.onclick=()=>finish(b.dataset.fin));
-  bar.querySelectorAll('[data-kill]').forEach(b=>b.onclick=()=>{
-    const o=openF.find(x=>x.id===b.dataset.kill);
-    if(confirm('Offenen Mangel „'+(o.kind||'Mangel')+'“ ab '+Math.round(o.dist)+' m verwerfen?')){
-      openF=openF.filter(x=>x.id!==b.dataset.kill);save();render();
-    }
-  });
-}
-
-function finish(id){
-  const o=openF.find(x=>x.id===id);if(!o)return;
-  const len=dist-o.dist;
-  if(len<1){toast('Noch keine Strecke seit Mangelbeginn');return;}
-  if(!confirm('Mangel „'+(o.kind||'Mangel')+'“ hier beenden?\nLänge: '+len.toFixed(1)+' m ('+Math.round(o.dist)+' – '+Math.round(dist)+' m)'))return;
-  openF=openF.filter(x=>x.id!==id);
-  const rec={...o,len,tsEnd:new Date().toISOString()};
-  delete rec.id;
-  findings.push(rec);
-  findings.sort((a,b)=>a.dist-b.dist);
-  save();render();toast('Mangel geschlossen · '+len.toFixed(1)+' m');
-}
-
-$('#list').onclick=e=>{
-  const b=e.target.closest('.del');if(!b)return;
-  if(confirm('Befund löschen?')){findings.splice(+b.dataset.i,1);save();render();}
-};
-
+/* ===== PDF ===== */
 $('#bPdf').onclick=()=>{
   const {jsPDF}=window.jspdf,d=new jsPDF({unit:'mm',format:'a4'});
   const W=210,M=15;let y=M;
-  const SEV=['','Gering','Mittel','Kritisch'];
-  const RGB={1:[242,194,0],2:[255,122,26],3:[224,36,59]};
+  const {total,nR,renew,sq,rows}=analyse();
+
   d.setFillColor(27,29,30);d.rect(0,0,W,26,'F');
   d.setTextColor(255);d.setFontSize(17);d.setFont('helvetica','bold');
   d.text('INSPEKTIONSBERICHT GLEIS',M,13);
   d.setFontSize(9);d.setFont('helvetica','normal');d.setTextColor(200);
-  d.text(new Date().toLocaleString('de-DE')+'  ·  '+findings.length+' Befunde',M,20);
+  d.text(new Date().toLocaleString('de-DE')+'  ·  '+rows.length+' Befunde',M,20);
   y=34;d.setTextColor(0);
 
-  // Start / Ende
-  const total=closed()?endDist:dist;
-  d.setFont('helvetica','bold');d.setFontSize(10);
-  d.text('STRECKENABSCHNITT',M,y);
+  d.setFont('helvetica','bold');d.setFontSize(10);d.text('STRECKENABSCHNITT',M,y);
   d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(80);
   d.text('Start: '+(route?.start?route.start.lat.toFixed(6)+', '+route.start.lon.toFixed(6):'–')+
     '   '+(route?.ts?new Date(route.ts).toLocaleString('de-DE'):'–'),M,y+6);
   d.text('Ende:  '+(route?.endPt?route.endPt.lat.toFixed(6)+', '+route.endPt.lon.toFixed(6):'nicht gesetzt')+
     '   '+(route?.endTs?new Date(route.endTs).toLocaleString('de-DE'):''),M,y+11);
   d.setFont('helvetica','bold');
-  d.text('Länge: '+Math.round(total)+' m'+(closed()?'':'  (Inspektion nicht abgeschlossen)')+
-    (openF.length?'   ·  '+openF.length+' Mangel noch offen – nicht im Bericht':''),M,y+17);
+  d.text('Länge: '+Math.round(total)+' m  ·  '+nR+' Schienenfelder à '+RAIL+' m'+(closed()?'':'  (nicht abgeschlossen)'),M,y+17);
   d.setFont('helvetica','normal');
-
-  // Fotos rechts
   if(route?.photo){try{d.addImage(route.photo,'JPEG',W-M-52,y-4,52,39);d.setFontSize(6.5);d.setTextColor(140);d.text('Startfoto',W-M-52,y+38);}catch(e){}}
-  d.setTextColor(0);
-  y+=46;
+  d.setTextColor(0);y+=46;
 
-  // Schienenbilanz
-  const nR=Math.max(1,Math.ceil(total/RAIL));
-  const affM={};
-  findings.forEach(f=>{
-    const a=railNo(f.dist),b=railNo(f.dist+(f.len||0));
-    for(let r=a;r<=b;r++)affM[r]=Math.max(affM[r]||0,actColor(f.act));
-  });
-  const affK=Object.keys(affM).map(Number).sort((a,b)=>a-b);
-  const red=affK.filter(r=>affM[r]===3);
+  if(renew.size){
+    d.setDrawColor(224,36,59);d.setLineWidth(.6);d.line(M,y-6,W-M,y-6);d.setLineWidth(.2);
+    d.setFont('helvetica','bold');d.setFontSize(10);d.setTextColor(190,20,40);
+    d.text('SCHIENENERNEUERUNG',M,y);d.setTextColor(0);
+    d.setFont('helvetica','normal');d.setFontSize(8.5);
+    let ry=y+6;
+    [...renew].sort().forEach(k=>{
+      const [r,side]=k.split('|');
+      d.text('Feld R'+r+' · Schiene '+side+' · '+sq[k]+' Squats auf 30 m  →  '+ERNEUERN,M,ry);ry+=5;
+    });
+    y=ry+6;
+  }
+
   d.setDrawColor(180);d.line(M,y-6,W-M,y-6);
-  d.setFont('helvetica','bold');d.setFontSize(10);d.text('SCHIENENBILANZ (Regellänge '+RAIL+' m)',M,y);
-  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(80);
-  d.text('Abschnitt umfasst '+nR+' Schienenfelder · '+affK.length+' mit Befund · '+red.length+' zur Erneuerung',M,y+6);
-  if(affK.length){
-    const txt=affK.map(r=>'R'+r+(affM[r]===3?'*':'')).join(', ');
-    const ls=d.splitTextToSize('Betroffen: '+txt+(red.length?'    (* = Erneuerung)':''),W-2*M);
-    d.text(ls,M,y+11);y+=11+ls.length*4.4;
-  }else{y+=11;}
-  d.setTextColor(0);
-  y+=8;d.setDrawColor(180);d.line(M,y-6,W-M,y-6);
+  d.setFont('helvetica','bold');d.setFontSize(10);d.text('BEFUNDE',M,y);y+=7;
 
-  findings.forEach((f,i)=>{
-    if(y>248){d.addPage();y=M;}
-    const c=RGB[actColor(f.act)];
-    d.setFillColor(...c);d.rect(M-4,y-5,2.6,26,'F');
-    d.setDrawColor(210);d.line(M,y-5,W-M,y-5);
-    d.setFont('helvetica','bold');d.setFontSize(12);
-    d.text(Math.round(f.dist)+(f.len>0?' – '+Math.round(f.dist+f.len)+' m':' m'),M,y+2);
-    d.setFontSize(11);d.text(f.kind||'Befund',M+34,y+2);
-    d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(90);
-    const ra=railNo(f.dist),rb=railNo(f.dist+(f.len||0));
-    d.text('#'+(i+1)+'  ·  Seite: '+f.side+'  ·  '+SEV[f.sev]+
-      (f.len>0?'  ·  Länge '+f.len.toFixed(1)+' m':'  ·  punktuell')+
-      '  ·  Schiene '+(ra===rb?'R'+ra:'R'+ra+'–R'+rb)+'  ·  GPS ±'+Math.round(f.acc)+' m',M,y+8);
-    d.setTextColor(0);d.setFont('helvetica','bold');
-    d.text('Maßnahme: '+f.act,M,y+13.5);d.setFont('helvetica','normal');
-    let h=19;
-    if(f.note){const ls=d.splitTextToSize(f.note,W-2*M-46);d.text(ls,M,y+19);h=19+ls.length*4.6;}
-    if(f.pics.length){let x=W-M-42;f.pics.slice(0,2).forEach(p=>{try{d.addImage(p,'JPEG',x,y-2,40,30);x-=44;}catch(e){}});h=Math.max(h,32);}
-    d.setFontSize(7);d.setTextColor(140);
-    d.text(f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'  ·  '+new Date(f.ts).toLocaleTimeString('de-DE'),M,y+h);
-    d.setTextColor(0);y+=h+9;
+  d.setFontSize(7.5);d.setTextColor(110);
+  d.text('METER',M,y);d.text('FELD',M+30,y);d.text('SEITE',M+44,y);
+  d.text('FEHLERART',M+62,y);d.text('BESEITIGUNG',M+112,y);d.text('LÄNGE',M+150,y);
+  d.setTextColor(0);y+=2;d.line(M,y,W-M,y);y+=5;
+
+  const RGBS={'Schleifen':[242,194,0],'Schweißen':[255,122,26],'Fräsen':[0,180,216],[ERNEUERN]:[224,36,59]};
+  d.setFontSize(8.5);
+  rows.forEach(m=>{
+    if(y>276){d.addPage();y=M;}
+    const c=RGBS[m.fix]||[140,140,140];
+    d.setFillColor(...c);d.rect(M-3.5,y-3.2,2,4,'F');
+    d.setFont('helvetica','bold');
+    d.text(String(Math.round(m.dist))+(m.len>0?'–'+Math.round(m.dist+m.len):''),M,y);
+    d.setFont('helvetica','normal');
+    d.text('R'+(m.r0===m.r1?m.r0:m.r0+'–'+m.r1),M+30,y);
+    d.text(m.side,M+44,y);
+    d.text(m.name,M+62,y);
+    d.setFont(m.over?'helvetica':'helvetica',m.over?'bold':'normal');
+    d.text(m.fix+(m.over?' *':''),M+112,y);
+    d.setFont('helvetica','normal');
+    d.text(m.len>0?m.len.toFixed(1)+' m':'punktuell',M+150,y);
+    y+=5.4;
   });
+  if(renew.size){
+    y+=3;d.setFontSize(7);d.setTextColor(120);
+    d.text('* Beseitigungsart durch Squat-Häufung ('+SQUAT_LIMIT+'+ pro 30 m) auf Schienenerneuerung hochgestuft.',M,y);
+  }
   d.save('Inspektion_'+new Date().toISOString().slice(0,10)+'.pdf');
 };
 
+buildPad();
 addEventListener('resize',drawTrack);
 gps();render();
 addEventListener('beforeunload',()=>{if(watchId)navigator.geolocation.clearWatch(watchId);});
