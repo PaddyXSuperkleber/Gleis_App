@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1d1e">
+<title>Gleisinspektion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --schotter:#1b1d1e;--schotter-2:#26292b;--schotter-3:#34383b;
+  --kies:#8b9094;--kalk:#e8e6e1;--line:#414548;
+  --warn:#ff8a00;--signal:#e0243b;--rost:#8c4b28;--gruen:#3fa34d;--stahl:#6f7679;
+  --schleifen:#f2c200;--schweissen:#ff7a1a;--fraesen:#00b4d8;--erneuern:#e0243b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--schotter);color:var(--kalk);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:16px;padding-bottom:env(safe-area-inset-bottom);overscroll-behavior-y:contain}
+h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;margin:0}
+button{font-family:inherit;border:0;cursor:pointer;color:inherit}
+button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+
+header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bottom:2px solid var(--line);padding:calc(env(safe-area-inset-top) + 9px) 14px 9px;display:flex;align-items:center;gap:10px}
+.logo{font-family:'Oswald';font-weight:700;font-size:.98rem;letter-spacing:.1em}
+.logo em{color:var(--warn);font-style:normal}
+.gps{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:.7rem;letter-spacing:.08em;font-family:'IBM Plex Mono';color:var(--kies)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--kies);flex:none}
+.dot.on{background:var(--gruen);animation:p 2s infinite}
+.dot.bad{background:var(--signal)}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(63,163,77,.7)}70%{box-shadow:0 0 0 9px rgba(63,163,77,0)}100%{box-shadow:0 0 0 0 rgba(63,163,77,0)}}
+@media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+
+.meter{padding:16px 14px 12px;text-align:center;background:repeating-linear-gradient(90deg,transparent 0 26px,rgba(255,255,255,.035) 26px 30px),var(--schotter);border-bottom:2px solid var(--line)}
+.meter .lab{font-family:'Oswald';font-size:.68rem;letter-spacing:.2em;color:var(--kies)}
+.meter .val{font-family:'IBM Plex Mono';font-weight:700;font-size:clamp(2.8rem,15vw,4.4rem);line-height:.94;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin:2px 0}
+.meter .val small{font-size:.26em;color:var(--warn);margin-left:.15em}
+.meter .sub{font-family:'IBM Plex Mono';font-size:.72rem;color:var(--kies)}
+.meter .sub2{font-family:'IBM Plex Mono';font-size:.66rem;color:#5f6468;margin-top:2px}
+.meter.idle .val{color:var(--schotter-3)}
+
+.bar{display:grid;grid-template-columns:1.1fr 1.1fr .8fr .6fr;gap:2px;background:var(--line)}
+.bar button{padding:13px 3px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.03em;font-size:.72rem;font-weight:600}
+.bar button:active{background:var(--schotter-3)}
+.bar .start{background:var(--gruen);color:#0d1a0f}
+.bar .stop{background:var(--rost)}
+.bar .done{background:var(--kies);color:#15171a}
+.bar button:disabled{color:#5a5f63}
+
+/* ===== Erfassungstasten ===== */
+.pad{display:grid;grid-template-columns:1fr auto 1fr;gap:0;background:var(--schotter);border-bottom:2px solid var(--line);padding:10px 10px 12px}
+.pad.off{opacity:.35;pointer-events:none}
+.pcol{display:flex;flex-direction:column;gap:5px}
+.pmid{width:26px;display:flex;align-items:center;justify-content:center}
+.pmid span{font-family:'Oswald';font-size:.58rem;letter-spacing:.2em;color:#5f6468;writing-mode:vertical-rl}
+.phead{font-family:'Oswald';font-size:.66rem;letter-spacing:.18em;color:var(--kies);text-align:center;padding-bottom:4px}
+.fb{position:relative;padding:11px 6px;background:var(--schotter-2);border:1px solid var(--line);border-left:4px solid var(--c);font-family:'Oswald';font-size:.76rem;letter-spacing:.02em;text-align:left;line-height:1.15;min-height:44px;display:flex;align-items:center}
+.fb:active{background:var(--schotter-3)}
+.fb .cnt{position:absolute;top:3px;right:4px;font-family:'IBM Plex Mono';font-size:.58rem;color:#5f6468}
+.fb.run{background:var(--c);color:#15171a;border-color:var(--c);font-weight:700}
+.fb.run::after{content:'';position:absolute;left:4px;top:50%;width:5px;height:5px;border-radius:50%;background:#15171a;transform:translateY(-50%);animation:bl 1.2s infinite}
+@keyframes bl{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.fb.run::after{animation:none}}
+
+.track-wrap{background:var(--schotter);border-bottom:2px solid var(--line)}
+.track-head{display:flex;align-items:center;padding:11px 14px 5px;gap:10px;flex-wrap:wrap}
+.track-head h3{font-size:.74rem;letter-spacing:.2em;color:var(--kies)}
+.legend{margin-left:auto;display:flex;gap:8px;font-family:'IBM Plex Mono';font-size:.56rem;color:var(--kies);align-items:center;flex-wrap:wrap}
+.legend i{width:8px;height:8px;display:inline-block;margin-right:3px;vertical-align:-1px}
+.track-scroll{overflow-x:auto;padding:0 14px 12px}
+#track{display:block;min-width:100%}
+.rail-lbl{font-family:'Oswald';font-size:9px;letter-spacing:.14em;fill:var(--kies)}
+.tick-lbl{font-family:'IBM Plex Mono';font-size:8px;fill:#5f6468}
+.joint-lbl{font-family:'IBM Plex Mono';font-size:7.5px;fill:#6f7679}
+.mk{cursor:pointer}
+.mk-lbl{font-family:'IBM Plex Mono';font-size:8px;font-weight:700}
+.track-empty{padding:28px 14px 32px;text-align:center;color:#5f6468;font-family:'Oswald';font-size:.78rem;letter-spacing:.12em}
+
+.rail-stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--line);margin:0 14px 12px}
+.rail-stat div{background:var(--schotter-2);padding:8px 6px;text-align:center}
+.rail-stat b{display:block;font-family:'IBM Plex Mono';font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.rail-stat span{font-family:'Oswald';font-size:.54rem;letter-spacing:.12em;color:var(--kies)}
+
+main{padding:12px 14px 30px}
+.empty{border:2px dashed var(--line);padding:26px 18px;text-align:center;color:var(--kies);font-size:.86rem;line-height:1.6}
+.empty b{display:block;font-family:'Oswald';color:var(--kalk);font-size:1rem;margin-bottom:6px;letter-spacing:.05em}
+.sec{font-family:'Oswald';font-size:.68rem;letter-spacing:.18em;color:var(--kies);margin:16px 0 8px}
+.card{background:var(--schotter-2);border-left:5px solid var(--c);margin-bottom:7px;padding:10px 11px;display:flex;gap:11px;align-items:center}
+.card .km{font-family:'IBM Plex Mono';font-weight:700;font-size:1.02rem;font-variant-numeric:tabular-nums;flex:none;min-width:78px}
+.card .km i{display:block;font-style:normal;font-size:.54rem;color:var(--kies);letter-spacing:.09em;font-family:'Oswald';margin-top:1px}
+.card .bd{flex:1;min-width:0}
+.card .t{font-family:'Oswald';font-size:.92rem;letter-spacing:.03em}
+.card .tags{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-family:'IBM Plex Mono';font-size:.6rem;padding:2px 5px;background:var(--schotter-3);letter-spacing:.04em}
+.card .del{background:none;color:#5f6468;font-size:1.3rem;line-height:1;padding:2px 4px;flex:none}
+.rw{background:var(--schotter-2);border-left:5px solid var(--erneuern);padding:9px 11px;margin-bottom:7px;font-size:.82rem;line-height:1.4}
+.rw b{font-family:'Oswald';letter-spacing:.04em}
+
+.toast{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);background:var(--kalk);color:var(--schotter);padding:12px;font-family:'Oswald';letter-spacing:.05em;text-align:center;z-index:50;transform:translateY(140%);transition:transform .25s}
+.toast.show{transform:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GLEIS<em>·</em>INSPEKTION</div>
+  <div class="gps"><span class="dot" id="dot"></span><span id="acc">kein Signal</span></div>
+</header>
+
+<section class="meter idle" id="meter">
+  <div class="lab">Gelaufene Strecke</div>
+  <div class="val" id="dist">–<small>m</small></div>
+  <div class="sub" id="msub">Inspektion nicht gestartet</div>
+  <div class="sub2" id="mair"></div>
+</section>
+
+<div class="bar">
+  <button class="start" id="bStart">Start setzen</button>
+  <button id="bEndPt" disabled>Ende setzen</button>
+  <button id="bPdf" disabled>PDF</button>
+  <button id="bZoom">1:1</button>
+</div>
+
+<section class="pad off" id="pad">
+  <div class="pcol" id="padL"></div>
+  <div class="pmid"><span>SCHIENE</span></div>
+  <div class="pcol" id="padR"></div>
+</section>
+
+<section class="track-wrap">
+  <div class="track-head">
+    <h3>Gleisbild</h3>
+    <div class="legend">
+      <span><i style="background:#f2c200"></i>Schleifen</span>
+      <span><i style="background:#ff7a1a"></i>Schweißen</span>
+      <span><i style="background:#00b4d8"></i>Fräsen</span>
+      <span><i style="background:#e0243b"></i>Erneuern</span>
+    </div>
+  </div>
+  <div class="track-scroll" id="tscroll"><svg id="track"></svg></div>
+  <div class="track-empty" id="tempty">Start setzen, dann erscheint das Gleisbild</div>
+  <div class="rail-stat" id="railStat" style="display:none">
+    <div><b id="rsLen">0</b><span>Meter</span></div>
+    <div><b id="rsCnt">0</b><span>Felder à 30 m</span></div>
+    <div><b id="rsAff">0</b><span>Mit Befund</span></div>
+  </div>
+</section>
+
+<main>
+  <div class="empty" id="empty">
+    <b>Noch keine Befunde</b>
+    Start setzen, dann über die Tasten oben Fehler auf die aktuelle Meterzahl setzen.
+  </div>
+  <div id="out"></div>
+</main>
+
+<input type="file" id="startPic" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== Fehlerarten =====
+   mode 'p' = punktuell, 'r' = Bereich (Start/Ende)
+   fix     = automatische Beseitigungsart                          */
+const TYPES=[
+  {id:'ff',  n:'Fahrflächenfehler', mode:'p', fix:'Schleifen',  c:'#f2c200'},
+  {id:'sq',  n:'Squat',             mode:'p', fix:'Schweißen',  c:'#ff7a1a'},
+  {id:'rif', n:'Riffelbildung',     mode:'r', fix:'Fräsen',     c:'#00b4d8'},
+  {id:'hc',  n:'Head Checks',       mode:'r', fix:'Fräsen',     c:'#00b4d8'}
+];
+const T=id=>TYPES.find(t=>t.id===id);
+const RAIL=30, SQUAT_LIMIT=6, ERNEUERN='Schiene erneuern', C_ERN='#e0243b';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let watchId=null,start=null,last=null,dist=0,acc=null,cur=null,back=false,zoom=1;
+let startPhoto=null,startTs=null,endPt=null,endTs=null,endDist=null;
+const ZOOMS=[1,2,.5,.25];let zi=0;
+let marks=JSON.parse(localStorage.getItem('gi2_m')||'[]');   // {type,side,dist,len,ts}
+let open=JSON.parse(localStorage.getItem('gi2_o')||'[]');    // {key,type,side,dist,ts}
+let route=JSON.parse(localStorage.getItem('gi2_r')||'null');
+if(route){start=route.start;dist=route.dist;last=route.last;startPhoto=route.photo||null;
+  startTs=route.ts||null;endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;}
+const MIN_MOVE=5,MAX_ACC=25;
+const closed=()=>!!endPt;
+const railNo=m=>Math.floor(m/RAIL)+1;
+const keyOf=(t,s)=>t+'|'+s;
+
+function hav(a,b){
+  const R=6371000,t=Math.PI/180;
+  const df=(b.lat-a.lat)*t,dl=(b.lon-a.lon)*t;
+  const x=Math.sin(df/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dl/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2400);}
+function save(){
+  localStorage.setItem('gi2_m',JSON.stringify(marks));
+  localStorage.setItem('gi2_o',JSON.stringify(open));
+  const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
+  localStorage.setItem('gi2_r',JSON.stringify(r));route=r;
+}
+function shrink(file,max,q){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onerror=()=>rej(new Error('Datei nicht lesbar'));
+    r.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>rej(new Error('Kein gültiges Bild'));
+      img.onload=()=>{
+        const c=document.createElement('canvas');
+        const s=Math.min(1,max/Math.max(img.width,img.height));
+        c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        res(c.toDataURL('image/jpeg',q));
+      };img.src=r.result;
+    };r.readAsDataURL(file);
+  });
+}
+
+/* ===== Auswertung: Squat-Regel pro Schiene & Feld ===== */
+function analyse(){
+  const total=closed()?endDist:dist;
+  const nR=Math.max(1,Math.ceil(total/RAIL));
+  // Squats pro Feld/Seite zaehlen
+  const sq={};
+  marks.filter(m=>m.type==='sq').forEach(m=>{
+    const k=railNo(m.dist)+'|'+m.side;
+    sq[k]=(sq[k]||0)+1;
+  });
+  const renew=new Set();
+  Object.entries(sq).forEach(([k,n])=>{if(n>=SQUAT_LIMIT)renew.add(k);});
+  // jeder Mangel bekommt seine Beseitigungsart
+  const rows=marks.map(m=>{
+    const t=T(m.type);
+    const a=railNo(m.dist),b=railNo(m.dist+(m.len||0));
+    let fix=t.fix,col=t.c,over=false;
+    for(let r=a;r<=b;r++){
+      if(renew.has(r+'|'+m.side)){fix=ERNEUERN;col=C_ERN;over=true;break;}
+    }
+    return {...m,name:t.n,fix,col,over,r0:a,r1:b};
+  });
+  return {total,nR,renew,sq,rows};
+}
+
+function gps(){
+  if(!navigator.geolocation){$('#acc').textContent='nicht verfügbar';$('#dot').className='dot bad';return;}
+  watchId=navigator.geolocation.watchPosition(p=>{
+    acc=p.coords.accuracy;cur={lat:p.coords.latitude,lon:p.coords.longitude};
+    $('#acc').textContent='±'+Math.round(acc)+' m';
+    $('#dot').className='dot '+(acc<=MAX_ACC?'on':'bad');
+    if(start&&last&&!closed()&&acc<=MAX_ACC){
+      const d=hav(last,cur);
+      if(d>=MIN_MOVE){
+        const wasAir=hav(start,last),nowAir=hav(start,cur);
+        if(nowAir<wasAir-1){dist=Math.max(0,dist-d);back=true;}
+        else{dist+=d;back=false;}
+        last=cur;save();
+      }
+    }
+    render();
+  },e=>{
+    $('#acc').textContent='Fehler';$('#dot').className='dot bad';
+    if(e.code===1)toast('Standortzugriff abgelehnt');
+    else if(location.protocol!=='https:'&&location.hostname!=='localhost')toast('GPS braucht HTTPS');
+  },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+}
+
+/* ===== Tastenfeld ===== */
+function buildPad(){
+  ['links','rechts'].forEach(side=>{
+    const col=$(side==='links'?'#padL':'#padR');
+    col.innerHTML='<div class="phead">'+side.toUpperCase()+'</div>'+
+      TYPES.map(t=>`<button class="fb" data-t="${t.id}" data-s="${side}" style="--c:${t.c}">
+        <span class="lbl"></span><span class="cnt"></span></button>`).join('');
+  });
+  document.querySelectorAll('.fb').forEach(b=>b.onclick=()=>hit(b.dataset.t,b.dataset.s));
+}
+function padState(){
+  $('#pad').className='pad'+(start&&!closed()?'':' off');
+  document.querySelectorAll('.fb').forEach(b=>{
+    const t=T(b.dataset.t),side=b.dataset.s;
+    const run=open.find(o=>o.key===keyOf(t.id,side));
+    const n=marks.filter(m=>m.type===t.id&&m.side===side).length;
+    b.classList.toggle('run',!!run);
+    b.querySelector('.lbl').textContent=t.mode==='p'?t.n:(run?t.n+' Ende':t.n+' Start');
+    b.querySelector('.cnt').textContent=run?Math.max(0,dist-run.dist).toFixed(0)+'m':(n||'');
+  });
+}
+function hit(tid,side){
+  if(!start||closed())return;
+  if(!cur){toast('Kein GPS-Fix');return;}
+  const t=T(tid),k=keyOf(tid,side);
+  if(t.mode==='p'){
+    marks.push({type:tid,side,dist,len:0,ts:new Date().toISOString()});
+    marks.sort((a,b)=>a.dist-b.dist);save();render();
+    toast(t.n+' · '+side+' · '+Math.round(dist)+' m');
+    return;
+  }
+  const run=open.find(o=>o.key===k);
+  if(!run){
+    open.push({key:k,type:tid,side,dist,ts:new Date().toISOString()});
+    save();render();toast(t.n+' offen ab '+Math.round(dist)+' m');
+  }else{
+    const len=dist-run.dist;
+    if(len<1){toast('Noch keine Strecke seit Beginn');return;}
+    open=open.filter(o=>o.key!==k);
+    marks.push({type:tid,side,dist:run.dist,len,ts:run.ts,tsEnd:new Date().toISOString()});
+    marks.sort((a,b)=>a.dist-b.dist);save();render();
+    toast(t.n+' · '+len.toFixed(0)+' m · '+side);
+  }
+}
+
+/* ===== Gleisbild ===== */
+function drawTrack(){
+  const svg=$('#track');
+  if(!start){$('#tempty').style.display='block';svg.style.display='none';$('#railStat').style.display='none';return;}
+  $('#tempty').style.display='none';svg.style.display='block';$('#railStat').style.display='grid';
+
+  const {total,nR,renew,rows}=analyse();
+  const W=$('#tscroll').clientWidth-28||320;
+  const PAD_T=26,PAD_B=24;
+  const span=Math.max(total,...rows.map(m=>m.dist+(m.len||0)),...open.map(o=>o.dist),RAIL);
+  const H=Math.max(300,Math.min(2800,span*1.7*zoom+PAD_T+PAD_B));
+  const cx=W/2,gauge=Math.min(86,W*0.30);
+  const xL=cx-gauge/2,xR=cx+gauge/2;
+  const y=m=>PAD_T+(m/span)*(H-PAD_T-PAD_B);
+  const nF=Math.max(1,Math.ceil(span/RAIL));
+
+  // Feldfarbe = schaerfste Massnahme im Feld
+  const rank={'Schleifen':1,'Fräsen':2,'Schweißen':3,[ERNEUERN]:4};
+  const fld={};
+  rows.forEach(m=>{for(let r=m.r0;r<=m.r1;r++){
+    if(!fld[r]||rank[m.fix]>rank[fld[r].fix])fld[r]={fix:m.fix,col:m.col};
+  }});
+
+  let sl='';
+  const step=Math.max(2,Math.round(span/70));
+  for(let m=0;m<=span;m+=step)
+    sl+=`<line x1="${xL-13}" y1="${y(m)}" x2="${xR+13}" y2="${y(m)}" stroke="#3a3d3f" stroke-width="3"/>`;
+
+  let jt='';
+  for(let r=1;r<=nF;r++){
+    const y0=y((r-1)*RAIL),y1=y(Math.min(r*RAIL,span));
+    if(fld[r])jt+=`<rect x="${xL-15}" y="${y0}" width="${gauge+30}" height="${Math.max(1,y1-y0)}" fill="${fld[r].col}" opacity=".08"/>`;
+    jt+=`<line x1="${xL-19}" y1="${y0}" x2="${xL+7}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>
+         <line x1="${xR-7}" y1="${y0}" x2="${xR+19}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>`;
+    if(y1-y0>12)jt+=`<text class="joint-lbl" x="${cx}" y="${(y0+y1)/2+3}" text-anchor="middle" fill="${fld[r]?fld[r].col:'#5a5f63'}">R${r}</text>`;
+  }
+  const yE=y(Math.min(nF*RAIL,span));
+  jt+=`<line x1="${xL-19}" y1="${yE}" x2="${xL+7}" y2="${yE}" stroke="#8b9094" stroke-width="2"/>
+       <line x1="${xR-7}" y1="${yE}" x2="${xR+19}" y2="${yE}" stroke="#8b9094" stroke-width="2"/>`;
+
+  let tk='';
+  const ts=span<=60?10:span<=200?30:span<=600?60:span<=1500?150:300;
+  for(let m=0;m<=span;m+=ts)
+    tk+=`<line x1="${xL-26}" y1="${y(m)}" x2="${xL-21}" y2="${y(m)}" stroke="#5f6468"/>
+         <text class="tick-lbl" x="${xL-29}" y="${y(m)+3}" text-anchor="end">${m}</text>`;
+
+  const rails=`
+    <line x1="${xL}" y1="${PAD_T}" x2="${xL}" y2="${H-PAD_B}" stroke="var(--stahl)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="${xR}" y1="${PAD_T}" x2="${xR}" y2="${H-PAD_B}" stroke="var(--stahl)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="${xL}" y1="${PAD_T}" x2="${xL}" y2="${H-PAD_B}" stroke="#9aa1a4" stroke-width="1.6"/>
+    <line x1="${xR}" y1="${PAD_T}" x2="${xR}" y2="${H-PAD_B}" stroke="#9aa1a4" stroke-width="1.6"/>`;
+
+  let fx='';
+  rows.forEach((m,i)=>{
+    const x=m.side==='links'?xL:xR;
+    const y1=y(m.dist),y2=y(m.dist+(m.len||0));
+    if(m.len>0){
+      fx+=`<g class="mk" data-i="${i}">
+        <line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+4)}" stroke="${m.col}" stroke-width="10" opacity=".9"/>
+        <line x1="${x-8}" y1="${y1}" x2="${x+8}" y2="${y1}" stroke="${m.col}" stroke-width="2.5"/>
+        <line x1="${x-8}" y1="${Math.max(y2,y1+4)}" x2="${x+8}" y2="${Math.max(y2,y1+4)}" stroke="${m.col}" stroke-width="2.5"/></g>`;
+    }else{
+      fx+=`<g class="mk" data-i="${i}"><circle cx="${x}" cy="${y1}" r="6.5" fill="${m.col}" stroke="var(--schotter)" stroke-width="1.8"/></g>`;
+    }
+  });
+  open.forEach(o=>{
+    const t=T(o.type),x=o.side==='links'?xL:xR;
+    const y1=y(o.dist),y2=y(Math.min(dist,span));
+    fx+=`<line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+3)}" stroke="${t.c}" stroke-width="10" opacity=".45" stroke-dasharray="5 4"/>
+      <line x1="${x-8}" y1="${y1}" x2="${x+8}" y2="${y1}" stroke="${t.c}" stroke-width="2.5"/>
+      <text class="mk-lbl" x="${o.side==='rechts'?x+11:x-11}" y="${y1-8}" text-anchor="${o.side==='rechts'?'start':'end'}" fill="${t.c}">OFFEN</text>`;
+  });
+
+  let mk=`<line x1="${xL-16}" y1="${PAD_T}" x2="${xR+16}" y2="${PAD_T}" stroke="var(--gruen)" stroke-width="3"/>
+    <text class="rail-lbl" x="${xR+21}" y="${PAD_T+3}" fill="#3fa34d">START</text>
+    <text class="rail-lbl" x="${xL}" y="13" text-anchor="middle">LINKS</text>
+    <text class="rail-lbl" x="${xR}" y="13" text-anchor="middle">RECHTS</text>`;
+  if(closed()){
+    const ye=y(endDist);
+    mk+=`<line x1="${xL-16}" y1="${ye}" x2="${xR+16}" y2="${ye}" stroke="var(--signal)" stroke-width="3"/>
+      <text class="rail-lbl" x="${xR+21}" y="${ye+3}" fill="#e0243b">ENDE ${Math.round(endDist)} M</text>`;
+  }else{
+    const yp=y(Math.min(dist,span));
+    mk+=`<line x1="${xL-16}" y1="${yp}" x2="${xR+16}" y2="${yp}" stroke="var(--kalk)" stroke-width="2" stroke-dasharray="4 3"/>
+      <circle cx="${cx}" cy="${yp}" r="5" fill="var(--kalk)"/>
+      <text class="rail-lbl" x="${xR+21}" y="${yp+3}" fill="#e8e6e1">${Math.round(dist)} M</text>`;
+  }
+
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.setAttribute('width',W);svg.setAttribute('height',H);
+  svg.innerHTML=sl+jt+tk+rails+fx+mk;
+  svg.querySelectorAll('.mk').forEach(g=>g.onclick=()=>{
+    const m=rows[+g.dataset.i];
+    toast(m.name+' · '+m.side+' · '+Math.round(m.dist)+' m'+(m.len>0?' ('+Math.round(m.len)+' m)':'')+' → '+m.fix);
+  });
+
+  $('#rsLen').textContent=Math.round(total);
+  $('#rsCnt').textContent=nR;
+  $('#rsAff').textContent=Object.keys(fld).length;
+  $('#rsAff').style.color=Object.keys(fld).length?'var(--warn)':'var(--kalk)';
+}
+
+function render(){
+  const m=$('#meter');
+  if(start){
+    m.classList.remove('idle');
+    $('#dist').innerHTML=Math.round(closed()?endDist:dist)+'<small>m</small>';
+    $('#msub').textContent=closed()
+      ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+marks.length+' Befunde'
+      : (acc?'GPS ±'+Math.round(acc)+' m · '+marks.length+' Befunde':'Warte auf GPS…');
+    const air=(start&&cur)?hav(start,cur):0;
+    $('#mair').textContent=closed()?'':'Luftlinie zum Start: '+Math.round(air)+' m'+(back?'  ·  rückwärts':'');
+  }else{
+    m.classList.add('idle');$('#dist').innerHTML='–<small>m</small>';
+    $('#msub').textContent='Inspektion nicht gestartet';$('#mair').textContent='';
+  }
+  $('#bPdf').disabled=!start;
+  $('#bEndPt').disabled=!start||closed();
+  $('#bEndPt').textContent=closed()?'Fertig':'Ende setzen';
+  $('#bEndPt').className=closed()?'done':'';
+  $('#bStart').textContent=start?'Verwerfen':'Start setzen';
+  $('#bStart').className=start?'stop':'start';
+  padState();
+  drawTrack();
+  drawOut();
+}
+
+/* ===== Auswertungsliste ===== */
+function drawOut(){
+  const {renew,sq,rows}=analyse();
+  $('#empty').style.display=(marks.length||open.length)?'none':'block';
+  let h='';
+  if(renew.size){
+    h+='<div class="sec">Schienenerneuerung nötig</div>';
+    [...renew].sort().forEach(k=>{
+      const [r,side]=k.split('|');
+      h+=`<div class="rw"><b>Feld R${r} · ${side}</b><br>${sq[k]} Squats auf 30 m → ${ERNEUERN}</div>`;
+    });
+  }
+  if(rows.length){
+    h+='<div class="sec">Befunde ('+rows.length+')</div>';
+    h+=rows.map((m,i)=>`
+      <div class="card" style="--c:${m.col}">
+        <div class="km">${Math.round(m.dist)}${m.len>0?'–'+Math.round(m.dist+m.len):''}<i>${m.len>0?Math.round(m.len)+' M LANG':'PUNKT'}</i></div>
+        <div class="bd">
+          <div class="t">${esc(m.name)}</div>
+          <div class="tags">
+            <span class="tag">${m.side.toUpperCase()}</span>
+            <span class="tag">R${m.r0===m.r1?m.r0:m.r0+'–'+m.r1}</span>
+            <span class="tag" style="background:${m.col};color:#1b1d1e;font-weight:700">${m.fix}${m.over?' ⚠':''}</span>
+          </div>
+        </div>
+        <button class="del" data-d="${i}">×</button>
+      </div>`).join('');
+  }
+  $('#out').innerHTML=h;
+  $('#out').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+    const m=rows[+b.dataset.d];
+    if(!confirm(m.name+' bei '+Math.round(m.dist)+' m löschen?'))return;
+    const j=marks.findIndex(x=>x.ts===m.ts&&x.type===m.type&&x.side===m.side);
+    if(j>-1){marks.splice(j,1);save();render();}
+  });
+}
+
+/* ===== Start / Ende ===== */
+$('#bStart').onclick=()=>{
+  if(start){
+    if(!confirm('Inspektion verwerfen? Alle Befunde und der Zähler werden gelöscht.'))return;
+    start=null;last=null;dist=0;startPhoto=null;startTs=null;
+    endPt=null;endTs=null;endDist=null;marks=[];open=[];
+    save();render();return;
+  }
+  if(!cur){toast('Noch kein GPS-Fix – kurz warten');return;}
+  if(acc>MAX_ACC){toast('GPS zu ungenau (±'+Math.round(acc)+' m)');return;}
+  toast('Startfoto aufnehmen');
+  $('#startPic').click();
+};
+$('#startPic').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';
+  if(!f){toast('Ohne Startfoto kein Start');return;}
+  if(!cur){toast('GPS-Fix verloren');return;}
+  try{startPhoto=await shrink(f,1400,.7);}catch(err){toast('Foto fehlgeschlagen');return;}
+  start=cur;last=cur;dist=0;startTs=new Date().toISOString();
+  save();render();toast('Startpunkt gesetzt');
+};
+$('#bEndPt').onclick=()=>{
+  if(!start||closed())return;
+  if(!cur){toast('Kein GPS-Fix');return;}
+  if(open.length){toast(open.length+' Mangel noch offen – erst beenden');return;}
+  if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen?'))return;
+  endPt=cur;endDist=dist;endTs=new Date().toISOString();
+  save();render();toast('Abgeschlossen · '+Math.round(endDist)+' m');
+};
+$('#bZoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;zoom=ZOOMS[zi];
+  $('#bZoom').textContent=zoom>=1?zoom+':1':'1:'+(1/zoom);drawTrack();};
+
+/* ===== PDF ===== */
+$('#bPdf').onclick=()=>{
+  const {jsPDF}=window.jspdf,d=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=15;let y=M;
+  const {total,nR,renew,sq,rows}=analyse();
+
+  d.setFillColor(27,29,30);d.rect(0,0,W,26,'F');
+  d.setTextColor(255);d.setFontSize(17);d.setFont('helvetica','bold');
+  d.text('INSPEKTIONSBERICHT GLEIS',M,13);
+  d.setFontSize(9);d.setFont('helvetica','normal');d.setTextColor(200);
+  d.text(new Date().toLocaleString('de-DE')+'  ·  '+rows.length+' Befunde',M,20);
+  y=34;d.setTextColor(0);
+
+  d.setFont('helvetica','bold');d.setFontSize(10);d.text('STRECKENABSCHNITT',M,y);
+  d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(80);
+  d.text('Start: '+(route?.start?route.start.lat.toFixed(6)+', '+route.start.lon.toFixed(6):'–')+
+    '   '+(route?.ts?new Date(route.ts).toLocaleString('de-DE'):'–'),M,y+6);
+  d.text('Ende:  '+(route?.endPt?route.endPt.lat.toFixed(6)+', '+route.endPt.lon.toFixed(6):'nicht gesetzt')+
+    '   '+(route?.endTs?new Date(route.endTs).toLocaleString('de-DE'):''),M,y+11);
+  d.setFont('helvetica','bold');
+  d.text('Länge: '+Math.round(total)+' m  ·  '+nR+' Schienenfelder à '+RAIL+' m'+(closed()?'':'  (nicht abgeschlossen)'),M,y+17);
+  d.setFont('helvetica','normal');
+  if(route?.photo){try{d.addImage(route.photo,'JPEG',W-M-52,y-4,52,39);d.setFontSize(6.5);d.setTextColor(140);d.text('Startfoto',W-M-52,y+38);}catch(e){}}
+  d.setTextColor(0);y+=46;
+
+  if(renew.size){
+    d.setDrawColor(224,36,59);d.setLineWidth(.6);d.line(M,y-6,W-M,y-6);d.setLineWidth(.2);
+    d.setFont('helvetica','bold');d.setFontSize(10);d.setTextColor(190,20,40);
+    d.text('SCHIENENERNEUERUNG',M,y);d.setTextColor(0);
+    d.setFont('helvetica','normal');d.setFontSize(8.5);
+    let ry=y+6;
+    [...renew].sort().forEach(k=>{
+      const [r,side]=k.split('|');
+      d.text('Feld R'+r+' · Schiene '+side+' · '+sq[k]+' Squats auf 30 m  →  '+ERNEUERN,M,ry);ry+=5;
+    });
+    y=ry+6;
+  }
+
+  d.setDrawColor(180);d.line(M,y-6,W-M,y-6);
+  d.setFont('helvetica','bold');d.setFontSize(10);d.text('BEFUNDE',M,y);y+=7;
+
+  d.setFontSize(7.5);d.setTextColor(110);
+  d.text('METER',M,y);d.text('FELD',M+30,y);d.text('SEITE',M+44,y);
+  d.text('FEHLERART',M+62,y);d.text('BESEITIGUNG',M+112,y);d.text('LÄNGE',M+150,y);
+  d.setTextColor(0);y+=2;d.line(M,y,W-M,y);y+=5;
+
+  const RGBS={'Schleifen':[242,194,0],'Schweißen':[255,122,26],'Fräsen':[0,180,216],[ERNEUERN]:[224,36,59]};
+  d.setFontSize(8.5);
+  rows.forEach(m=>{
+    if(y>276){d.addPage();y=M;}
+    const c=RGBS[m.fix]||[140,140,140];
+    d.setFillColor(...c);d.rect(M-3.5,y-3.2,2,4,'F');
+    d.setFont('helvetica','bold');
+    d.text(String(Math.round(m.dist))+(m.len>0?'–'+Math.round(m.dist+m.len):''),M,y);
+    d.setFont('helvetica','normal');
+    d.text('R'+(m.r0===m.r1?m.r0:m.r0+'–'+m.r1),M+30,y);
+    d.text(m.side,M+44,y);
+    d.text(m.name,M+62,y);
+    d.setFont(m.over?'helvetica':'helvetica',m.over?'bold':'normal');
+    d.text(m.fix+(m.over?' *':''),M+112,y);
+    d.setFont('helvetica','normal');
+    d.text(m.len>0?m.len.toFixed(1)+' m':'punktuell',M+150,y);
+    y+=5.4;
+  });
+  if(renew.size){
+    y+=3;d.setFontSize(7);d.setTextColor(120);
+    d.text('* Beseitigungsart durch Squat-Häufung ('+SQUAT_LIMIT+'+ pro 30 m) auf Schienenerneuerung hochgestuft.',M,y);
+  }
+  d.save('Inspektion_'+new Date().toISOString().slice(0,10)+'.pdf');
+};
+
+buildPad();
+addEventListener('resize',drawTrack);
+gps();render();
+addEventListener('beforeunload',()=>{if(watchId)navigator.geolocation.clearWatch(watchId);});
+</script>
+</body>
+</html>
