@@ -69,8 +69,7 @@ header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bott
 .joint-lbl{font-family:'IBM Plex Mono';font-size:7.5px;fill:#6f7679}
 .track-empty{padding:30px 14px 34px;text-align:center;color:#5f6468;font-family:'Oswald';font-size:.8rem;letter-spacing:.12em}
 
-main{padding:14px 14px 96px;transition:padding-bottom .2s}
-body.has-open main{padding-bottom:190px}
+main{padding:14px 14px 96px}
 .empty{border:2px dashed var(--line);padding:30px 18px;text-align:center;color:var(--kies);font-size:.9rem;line-height:1.6}
 .empty b{display:block;font-family:'Oswald';color:var(--kalk);font-size:1.05rem;margin-bottom:6px;letter-spacing:.05em}
 .card{background:var(--schotter-2);border-left:5px solid var(--m-info);margin-bottom:10px;padding:12px 13px;display:flex;gap:12px;align-items:flex-start}
@@ -86,9 +85,9 @@ body.has-open main{padding-bottom:190px}
 .card img{width:52px;height:52px;object-fit:cover;flex:none}
 .card .del{background:none;color:#5f6468;font-size:1.4rem;line-height:1;padding:2px 4px;flex:none}
 
-.open-bar{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 82px);z-index:29;display:none;flex-direction:column;gap:6px}
+.open-bar{position:sticky;top:calc(env(safe-area-inset-top) + 52px);z-index:28;display:none;flex-direction:column;gap:4px;padding:8px 14px;background:var(--schotter);border-bottom:2px solid var(--warn);box-shadow:0 6px 18px rgba(0,0,0,.5)}
 .open-bar.show{display:flex}
-.ob{display:flex;align-items:center;gap:10px;background:var(--schotter-2);border-left:5px solid var(--warn);padding:9px 10px;box-shadow:0 4px 18px rgba(0,0,0,.45)}
+.ob{display:flex;align-items:center;gap:10px;background:var(--schotter-2);border-left:5px solid var(--warn);padding:9px 10px}
 .ob .pulse{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;animation:ob 1.4s infinite}
 @keyframes ob{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.ob .pulse{animation:none}}
@@ -137,7 +136,7 @@ input[type=number]{font-family:'IBM Plex Mono'}
 .acts-row .ok{background:var(--gruen);color:#0d1a0f}
 .acts-row .no{background:var(--schotter-2);border:1px solid var(--line)}
 .hint{font-size:.72rem;color:var(--kies);margin-top:6px;line-height:1.5}
-.toast{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 150px);background:var(--kalk);color:var(--schotter);padding:13px;font-family:'Oswald';letter-spacing:.05em;text-align:center;z-index:50;transform:translateY(140%);transition:transform .25s}
+.toast{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 86px);background:var(--kalk);color:var(--schotter);padding:13px;font-family:'Oswald';letter-spacing:.05em;text-align:center;z-index:50;transform:translateY(140%);transition:transform .25s}
 .toast.show{transform:none}
 </style>
 </head>
@@ -149,10 +148,13 @@ input[type=number]{font-family:'IBM Plex Mono'}
 </header>
 
 <section class="meter idle" id="meter">
-  <div class="lab">Abstand vom Start</div>
+  <div class="lab">Gelaufene Strecke</div>
   <div class="val mono" id="dist">–<small>m</small></div>
   <div class="sub" id="msub">Inspektion nicht gestartet</div>
+  <div class="sub" id="mair" style="margin-top:3px;color:#5f6468"></div>
 </section>
+
+<div class="open-bar" id="openBar"></div>
 
 <div class="bar">
   <button class="start" id="bStart">Start setzen</button>
@@ -188,7 +190,6 @@ input[type=number]{font-family:'IBM Plex Mono'}
   <div id="list"></div>
 </main>
 
-<div class="open-bar" id="openBar"></div>
 <button class="fab" id="bAdd" disabled>+ Befund erfassen</button>
 
 <div class="sheet" id="sheet">
@@ -251,7 +252,6 @@ input[type=number]{font-family:'IBM Plex Mono'}
   </div>
 </div>
 
-<input type="file" id="endPic" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
 <input type="file" id="startPic" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
 <div class="toast" id="toast"></div>
 
@@ -272,14 +272,15 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 let watchId=null,start=null,last=null,dist=0,acc=null,cur=null,pending=[],zoom=1;
-let startPhoto=null,startTs=null,endPt=null,endPhoto=null,endTs=null,endDist=null;
+let startPhoto=null,startTs=null,endPt=null,endTs=null,endDist=null;
 const RAIL=30;
+let back=false;
 const ZOOMS=[1,2,.5,.25];let zi=0;
 let findings=JSON.parse(localStorage.getItem('gi_f')||'[]');
 let openF=JSON.parse(localStorage.getItem('gi_o')||'[]');
 let route=JSON.parse(localStorage.getItem('gi_r')||'null');
 if(route){start=route.start;dist=route.dist;last=route.last;startPhoto=route.photo||null;startTs=route.ts||null;
-  endPt=route.endPt||null;endPhoto=route.endPhoto||null;endTs=route.endTs||null;endDist=route.endDist??null;}
+  endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;}
 const MIN_MOVE=5,MAX_ACC=25;
 
 function hav(a,b){
@@ -289,7 +290,7 @@ function hav(a,b){
   return 2*R*Math.asin(Math.sqrt(x));
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
-function save(){localStorage.setItem('gi_f',JSON.stringify(findings));localStorage.setItem('gi_o',JSON.stringify(openF));const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endPhoto,endTs,endDist}:null;
+function save(){localStorage.setItem('gi_f',JSON.stringify(findings));localStorage.setItem('gi_o',JSON.stringify(openF));const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
   localStorage.setItem('gi_r',JSON.stringify(r));route=r;}
 const closed=()=>!!endPt;
 const railNo=m=>Math.floor(m/RAIL)+1;
@@ -323,7 +324,18 @@ function gps(){
     $('#dot').className='dot '+(acc<=MAX_ACC?'on':'bad');
     if(start&&last&&!closed()&&acc<=MAX_ACC){
       const d=hav(last,cur);
-      if(d>=MIN_MOVE){dist+=d;last=cur;save();}
+      if(d>=MIN_MOVE){
+        // Richtung: naehert sich der Punkt dem Start oder entfernt er sich?
+        const wasAir=hav(start,last), nowAir=hav(start,cur);
+        if(nowAir<wasAir-1){
+          // Rueckwaerts: Strecke wieder abziehen, nicht dazu
+          dist=Math.max(0,dist-d);
+          back=true;
+        }else{
+          dist+=d;back=false;
+        }
+        last=cur;save();
+      }
     }
     render();
     if($('#sheet').classList.contains('open'))liveLen();
@@ -467,6 +479,8 @@ function render(){
     $('#msub').textContent=closed()
       ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+findings.length+' Befunde'
       : (acc?'GPS ±'+Math.round(acc)+' m · '+findings.length+' Befunde':'Warte auf GPS…');
+    const air=(start&&cur)?hav(start,cur):0;
+    $('#mair').textContent=closed()?'':'Luftlinie zum Start: '+Math.round(air)+' m'+(back?'  ·  rückwärts':'');
   }else{
     m.classList.add('idle');$('#dist').innerHTML='–<small>m</small>';
     $('#msub').textContent='Inspektion nicht gestartet';
@@ -554,7 +568,7 @@ $('#bStart').onclick=()=>{
   if(start){
     if(!confirm('Inspektion verwerfen? Startpunkt, Endpunkt und Zähler werden gelöscht. Befunde bleiben in der Liste.'))return;
     start=null;last=null;dist=0;startPhoto=null;startTs=null;
-    endPt=null;endPhoto=null;endTs=null;endDist=null;openF=[];
+    endPt=null;endTs=null;endDist=null;openF=[];
     save();render();return;
   }
   if(!cur){toast('Noch kein GPS-Fix – kurz warten');return;}
@@ -580,16 +594,6 @@ $('#bEndPt').onclick=()=>{
   if(acc>MAX_ACC){toast('GPS zu ungenau (±'+Math.round(acc)+' m)');return;}
   if(openF.length){toast(openF.length+' Mangel noch offen – erst beenden');return;}
   if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen? Danach werden keine Befunde mehr erfasst.'))return;
-  toast('Endfoto aufnehmen');
-  $('#endPic').click();
-};
-
-$('#endPic').onchange=async e=>{
-  const f=e.target.files[0];e.target.value='';
-  if(!f){toast('Ohne Endfoto kein Abschluss');return;}
-  if(!cur){toast('GPS-Fix verloren – nochmal versuchen');return;}
-  try{endPhoto=await shrink(f,1400,.7);}
-  catch(err){toast('Foto fehlgeschlagen: '+err.message);return;}
   endPt=cur;endDist=dist;endTs=new Date().toISOString();
   save();render();toast('Inspektion abgeschlossen · '+Math.round(endDist)+' m');
 };
@@ -726,9 +730,7 @@ $('#bPdf').onclick=()=>{
   d.setFont('helvetica','normal');
 
   // Fotos rechts
-  let px=W-M-52;
-  if(route?.endPhoto){try{d.addImage(route.endPhoto,'JPEG',px,y-4,52,39);d.setFontSize(6.5);d.setTextColor(140);d.text('Endfoto',px,y+38);px-=55;}catch(e){}}
-  if(route?.photo){try{d.addImage(route.photo,'JPEG',px,y-4,52,39);d.setFontSize(6.5);d.setTextColor(140);d.text('Startfoto',px,y+38);}catch(e){}}
+  if(route?.photo){try{d.addImage(route.photo,'JPEG',W-M-52,y-4,52,39);d.setFontSize(6.5);d.setTextColor(140);d.text('Startfoto',W-M-52,y+38);}catch(e){}}
   d.setTextColor(0);
   y+=46;
 
