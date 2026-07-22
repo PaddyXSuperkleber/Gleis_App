@@ -65,8 +65,8 @@ header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bott
 .bar button:disabled{color:#5a5f63}
 
 /* ===== Kategorie-Umschalter ===== */
-.catrow{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--line)}
-.catrow .catb{padding:12px 4px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.04em;font-size:.74rem;font-weight:600;color:var(--kies)}
+.catrow{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--line)}
+.catrow .catb{padding:12px 2px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.01em;font-size:.64rem;font-weight:600;color:var(--kies)}
 .catrow .catb:active{background:var(--schotter-3)}
 .catrow .catb.act{background:var(--warn);color:#1b1d1e}
 
@@ -184,7 +184,7 @@ main{padding:12px 14px 30px}
       <span><i style="background:#2ea3a3"></i>Beseitigen</span>
       <span><i style="background:#9b6dd8"></i>Spur prüfen</span>
       <span><i style="background:#e0243b"></i>Erneuern</span>
-      <span><i style="background:#8b9094"></i>Freitext</span>
+      <span><i style="background:#8b9094"></i>Info / Freitext</span>
     </div>
   </div>
   <div class="track-scroll" id="tscroll"><svg id="track"></svg></div>
@@ -221,22 +221,28 @@ const CATS=[
     {id:'sq',  n:'Squat',             mode:'p'},
     {id:'rif', n:'Riffelbildung',     mode:'r'},
     {id:'hc',  n:'Head Checks',       mode:'r'},
-    {id:'sv',  n:'Seitenverschleiß',  mode:'r'}
+    {id:'sv',  n:'Seitenverschleiß',  mode:'r'},
+    {id:'sh',  n:'Schienenhöhe',      mode:'p', special:'sh'}
   ]},
   {id:'schwelle', n:'Schwelle',    c:'#8c4b28', sides:false, types:[
-    {id:'vg',  n:'Verwittert & Gerissen', mode:'p'},
+    {id:'vg',  n:'Verwittert & Gerissen', mode:'r'},
     {id:'bio', n:'Biologischer Zerfall',  mode:'p'},
     {id:'riss',n:'Rissbildung',           mode:'p'},
     {id:'geb', n:'Gebrochen',             mode:'p'},
     {id:'lr',  n:'Längsriss',             mode:'p'}
   ]},
-  {id:'sicht', n:'Sichtprüfung',   c:'#4b7a8c', sides:true,  types:[
+  {id:'sicht', n:'Befestigung',    c:'#4b7a8c', sides:true,  types:[
     {id:'schm', n:'Schottermangel',        mode:'p'},
     {id:'kll',  n:'Kleineisen lose',       mode:'p'},
     {id:'kld',  n:'Kleineisen Defekt',     mode:'p'},
     {id:'klk',  n:'Kleineisen Korrodiert', mode:'p'},
     {id:'rpg',  n:'Rippenplatte gebrochen',mode:'p'},
-    {id:'rpe',  n:'Rippenplatte eingefahren',mode:'p'}
+    {id:'rpe',  n:'Rippenplatte eingefahren',mode:'r'}
+  ]},
+  {id:'bau', n:'Bauwerke',    c:'#8b9094', sides:true, info:true, types:[
+    {id:'iso', n:'ISO-Stoß',    mode:'p'},
+    {id:'sig', n:'Signal',      mode:'p'},
+    {id:'spr', n:'Sprechsäule', mode:'p'}
   ]}
 ];
 const MEASURES={
@@ -261,23 +267,33 @@ const MEASURES={
     {id:'frei',      n:'Freitext',             c:'#8b9094'}
   ]
 };
-const RANK={kh:0,frei:1,schleifen:1,spur:1,fraesen:2,beseitigen:2,schweissen:3,erneuern:4};
+const RANK={info:0,kh:0,frei:1,schleifen:1,spur:1,fraesen:2,beseitigen:2,schweissen:3,erneuern:4};
 const FREE={id:'free',n:'Freitext',mode:'p'};
 
 const RAIL=30, SQUAT_LIMIT=6;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clipS=(s,n)=>{s=String(s);return s.length>n?s.slice(0,n-1)+'…':s;};
+const isInfoMark=m=>m.cat==='bau'||m.type==='sh';
 const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const findCat=id=>CATS.find(c=>c.id===id);
 const findType=(cat,id)=>id==='free'?FREE:(findCat(cat)?.types.find(t=>t.id===id)||{id,n:id,mode:'p'});
 const keyOf=(cat,t,s)=>cat+'|'+t+'|'+s;
 const railNo=m=>Math.floor(m/RAIL)+1;
-const sideLbl=s=>s==='beide'?'L&R':s;
-const markName=m=>m.type==='free'?(m.errText||'Freitext'):findType(m.cat,m.type).n;
+const sideLbl=s=>s==='beide'?'L&R':s==='links'?'Links':s==='rechts'?'Rechts':s;
+const markName=m=>{
+  if(m.cat==='bau'){
+    if(m.type==='free')return m.errText||'Info';
+    const base=findType(m.cat,m.type).n;
+    return base+(m.errText?' '+m.errText:'');
+  }
+  return m.type==='free'?(m.errText||'Freitext'):findType(m.cat,m.type).n;
+};
 function hexRgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
 
 let watchId=null,start=null,last=null,dist=0,acc=null,cur=null,back=false,zoom=1;
 let startPhoto=null,startTs=null,endPt=null,endTs=null,endDist=null;
+let startName='',endName='',pendingStartName='';
 const ZOOMS=[1,2,.5,.25];let zi=0;
 let curCat=localStorage.getItem('gi2_c')||'schiene';
 if(!findCat(curCat))curCat='schiene';
@@ -299,8 +315,9 @@ let marks=(JSON.parse(localStorage.getItem('gi2_m')||'[]')).map(m=>{
 let open=(JSON.parse(localStorage.getItem('gi2_o')||'[]')).map(o=>{if(!o.cat)o.cat='schiene';return o;});
 let route=JSON.parse(localStorage.getItem('gi2_r')||'null');
 if(route){start=route.start;dist=route.dist;last=route.last;startPhoto=route.photo||null;
-  startTs=route.ts||null;endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;}
-const MIN_MOVE=5,MAX_ACC=25;
+  startTs=route.ts||null;endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;
+  startName=route.startName||'';endName=route.endName||'';}
+const MIN_MOVE=3,MAX_ACC=25;
 const closed=()=>!!endPt;
 
 function hav(a,b){
@@ -315,7 +332,7 @@ function save(){
     localStorage.setItem('gi2_m',JSON.stringify(marks));
     localStorage.setItem('gi2_o',JSON.stringify(open));
     localStorage.setItem('gi2_n',trackName);
-    const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
+    const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist,startName,endName}:null;
     localStorage.setItem('gi2_r',JSON.stringify(r));route=r;
     return true;
   }catch(e){
@@ -358,6 +375,23 @@ function analyse(){
     return {...m,name:markName(m),r0:a,r1:b,over};
   });
   return {total,nR,warn,sq,rows};
+}
+
+/* Für Anzeige/PDF: nach Abschluss werden punktuelle Mängel (keine Bauwerke/Info)
+   je Kategorie+Fehler+Seite+Maßnahme zusammengefasst -> "6 Squats 10–50 m" */
+function summaryRows(){
+  const {rows}=analyse();
+  if(!closed())return rows;
+  const out=[],groups={};
+  rows.forEach(m=>{
+    const punctualDefect=m.len===0&&!isInfoMark(m);
+    if(!punctualDefect){out.push(m);return;}
+    const k=m.cat+'|'+m.type+'|'+m.side+'|'+m.fixKind+'|'+(m.errText||'');
+    if(!groups[k]){groups[k]={...m,count:1,distMax:m.dist,group:true};out.push(groups[k]);}
+    else{const g=groups[k];g.count++;g.dist=Math.min(g.dist,m.dist);g.distMax=Math.max(g.distMax,m.dist);
+      g.r0=railNo(g.dist);g.r1=railNo(g.distMax);}
+  });
+  return out;
 }
 
 function gps(){
@@ -450,7 +484,7 @@ function chooseMeasure(catId,sub){
 }
 function addMark(o){
   const m={id:rid(),cat:o.cat,type:o.type,errText:o.errText||'',side:o.side,
-    dist:o.dist,len:o.len||0,ts:o.ts||new Date().toISOString(),tsEnd:o.tsEnd,
+    dist:o.dist,len:o.len||0,val:o.val||'',ts:o.ts||new Date().toISOString(),tsEnd:o.tsEnd,
     fix:o.mm.fix,col:o.mm.col,fixKind:o.mm.kind,photo:null};
   marks.push(m);
   marks.sort((a,b)=>a.dist-b.dist);save();render();
@@ -500,32 +534,59 @@ function photoSheet(id){
 async function hit(catId,tid,side){
   if(!start||closed())return;
   if(!cur){toast('Kein GPS-Fix');return;}
-  /* Freitext-Fehler */
+  const cat=findCat(catId),t=findType(catId,tid);
+
+  /* Schienenhöhe: Zahl eingeben statt Maßnahme */
+  if(t.special==='sh'){
+    const v=(prompt('Schienenhöhe in mm, z.B. 154:')||'').trim();
+    if(!v)return;
+    addMark({cat:catId,type:tid,side,dist,len:0,val:v,mm:{fix:'SH = '+v,col:'#8b9094',kind:'info'}});
+    toast('Schienenhöhe '+v+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');
+    return;
+  }
+
+  /* Bauwerke: keine Maßnahme, stattdessen Bezeichnung als Info */
+  if(catId==='bau'){
+    let name;
+    if(tid==='free'){
+      name=(prompt('Bauwerk / Info eingeben:')||'').trim();
+      if(!name)return;
+      const mF=addMark({cat:catId,type:'free',errText:name,side,dist,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
+      toast(name+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');askPhoto(mF);return;
+    }
+    const bez=(prompt(t.n+' – Bezeichnung (z.B. IVG 30):')||'').trim();
+    const mB=addMark({cat:catId,type:tid,errText:bez,side,dist,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
+    toast(t.n+(bez?' '+bez:'')+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');askPhoto(mB);return;
+  }
+
+  /* Freitext-Fehler (Schiene/Schwelle/Befestigung) – punktuell, kein Fotoprompt */
   if(tid==='free'){
     const name=(prompt('Fehlerbeschreibung eingeben:')||'').trim();
     if(!name)return;
     const at=dist;
     const mm=await chooseMeasure(catId,name+' · '+sideLbl(side));
     if(!mm)return;
-    const m1=addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm});
+    addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm});
     toast(name+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
-    askPhoto(m1);
     return;
   }
-  const t=findType(catId,tid),k=keyOf(catId,tid,side);
+
+  const k=keyOf(catId,tid,side);
   if(t.mode==='p'){
     const at=dist;
     const mm=await chooseMeasure(catId,t.n+' · '+sideLbl(side));
     if(!mm)return;
-    const m2=addMark({cat:catId,type:tid,side,dist:at,len:0,mm});
+    addMark({cat:catId,type:tid,side,dist:at,len:0,mm});
     toast(t.n+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
-    askPhoto(m2);
-    return;
+    return;   // punktuell -> kein Fotoprompt
   }
-  /* Bereich */
+
+  /* Bereich – Foto direkt am Anfang abfragen */
   const run=open.find(o=>o.key===k);
   if(!run){
-    open.push({key:k,cat:catId,type:tid,side,dist,ts:new Date().toISOString()});
+    let ph=null;
+    if(confirm('Foto vom Mangel aufnehmen?'))ph=await takePhoto();
+    open.push({key:k,cat:catId,type:tid,side,dist,ts:new Date().toISOString(),photo:ph||null});
     save();render();toast(t.n+' offen ab '+Math.round(dist)+' m');
   }else{
     let len=dist-run.dist;
@@ -534,8 +595,8 @@ async function hit(catId,tid,side){
     if(!mm)return;
     open=open.filter(o=>o.key!==k);
     const m3=addMark({cat:catId,type:tid,side,dist:run.dist,len,ts:run.ts,tsEnd:new Date().toISOString(),mm});
+    if(run.photo){m3.photo=run.photo;save();render();}
     toast(t.n+' · '+len.toFixed(0)+' m · '+sideLbl(side));
-    askPhoto(m3);
   }
 }
 
@@ -551,9 +612,9 @@ function computeTrack(W,zoomv){
   const nF=Math.max(1,Math.ceil(span/RAIL));
   const xOf=s=>s==='links'?xL:s==='rechts'?xR:cx;
 
-  // Feldfarbe = schärfste Maßnahme im Feld
+  // Feldfarbe = schärfste Maßnahme im Feld (Bauwerke/Info zählen nicht)
   const fld={};
-  rows.forEach(m=>{for(let r=m.r0;r<=m.r1;r++){
+  rows.forEach(m=>{if(isInfoMark(m))return;for(let r=m.r0;r<=m.r1;r++){
     const rk=RANK[m.fixKind]??1;
     if(!fld[r]||rk>fld[r].rk)fld[r]={col:m.col,rk};
   }});
@@ -570,7 +631,7 @@ function computeTrack(W,zoomv){
     jt+=`<line x1="${xL-19}" y1="${y0}" x2="${xL+7}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>
          <line x1="${xR-7}" y1="${y0}" x2="${xR+19}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>`;
     const fa=(r-1)*RAIL,fb=Math.round(Math.min(r*RAIL,span));
-    const cnt=rows.filter(m=>m.r0<=r&&m.r1>=r).length;
+    const cnt=rows.filter(m=>!isInfoMark(m)&&m.r0<=r&&m.r1>=r).length;
     if(y1-y0>10)jt+=`<text class="joint-lbl" x="${xR+22}" y="${(y0+y1)/2+3}" text-anchor="start" fill="${fld[r]?fld[r].col:'#8b9094'}">${fa}–${fb} m${cnt?' · '+cnt+' F':''}</text>`;
   }
   const yE=y(Math.min(nF*RAIL,span));
@@ -591,7 +652,25 @@ function computeTrack(W,zoomv){
 
   let fx='';
   rows.forEach((m,i)=>{
-    const x=xOf(m.side),y1=y(m.dist),y2=y(m.dist+(m.len||0));
+    const y1=y(m.dist),y2=y(m.dist+(m.len||0));
+    /* Bauwerke: grau links neben dem Gleis, mit Beschriftung */
+    if(m.cat==='bau'){
+      const bx=xL-40;
+      fx+=`<g class="mk" data-i="${i}">
+        <line x1="${bx+4}" y1="${y1}" x2="${xL-2}" y2="${y1}" stroke="#8b9094" stroke-width="1" stroke-dasharray="2 2"/>
+        <rect x="${bx-3}" y="${y1-3}" width="6" height="6" fill="#8b9094"/>
+        <text x="${bx-6}" y="${y1+3}" text-anchor="end" font-family="monospace" font-size="7.5" fill="#8b9094">${esc(clipS(markName(m),16))}</text></g>`;
+      return;
+    }
+    /* Schienenhöhe: seitlicher Strich von der Schiene weg + SH-Wert */
+    if(m.type==='sh'){
+      const rx=m.side==='rechts'?xR:xL,dir=m.side==='rechts'?1:-1,ex=rx+dir*20;
+      fx+=`<g class="mk" data-i="${i}">
+        <line x1="${rx}" y1="${y1}" x2="${ex}" y2="${y1}" stroke="#8b9094" stroke-width="2"/>
+        <text x="${ex+dir*3}" y="${y1+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7.5" font-weight="700" fill="#8b9094">SH ${esc(m.val||'')}</text></g>`;
+      return;
+    }
+    const x=xOf(m.side);
     if(m.len>0){
       fx+=`<g class="mk" data-i="${i}">
         <line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+4)}" stroke="${m.col}" stroke-width="10" opacity=".9"/>
@@ -599,8 +678,7 @@ function computeTrack(W,zoomv){
         <line x1="${x-8}" y1="${Math.max(y2,y1+4)}" x2="${x+8}" y2="${Math.max(y2,y1+4)}" stroke="${m.col}" stroke-width="2.5"/></g>`;
     }else if(m.side==='beide'){
       fx+=`<g class="mk" data-i="${i}">
-        <line x1="${xL-10}" y1="${y1}" x2="${xR+10}" y2="${y1}" stroke="${m.col}" stroke-width="3"/>
-        <rect x="${cx-5}" y="${y1-5}" width="10" height="10" fill="${m.col}" stroke="var(--schotter)" stroke-width="1.6" transform="rotate(45 ${cx} ${y1})"/></g>`;
+        <line x1="${xL-10}" y1="${y1}" x2="${xR+10}" y2="${y1}" stroke="${m.col}" stroke-width="3.5"/></g>`;
     }else{
       fx+=`<g class="mk" data-i="${i}"><circle cx="${x}" cy="${y1}" r="6.5" fill="${m.col}" stroke="var(--schotter)" stroke-width="1.8"/></g>`;
     }
@@ -675,9 +753,10 @@ function render(){
   if(start){
     m.classList.remove('idle');
     $('#dist').innerHTML=Math.round(closed()?endDist:dist)+'<small>m</small>';
+    const nBef=marks.filter(m=>!isInfoMark(m)).length;
     $('#msub').textContent=closed()
-      ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+marks.length+' Befunde'
-      : (acc?'GPS ±'+Math.round(acc)+' m · '+marks.length+' Befunde':'Warte auf GPS…');
+      ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+nBef+' Befunde'
+      : (acc?'GPS ±'+Math.round(acc)+' m · '+nBef+' Befunde':'Warte auf GPS…');
     const air=(start&&cur)?hav(start,cur):0;
     $('#mair').textContent=closed()?'':'Luftlinie zum Start: '+Math.round(air)+' m'+(back?'  ·  rückwärts':'');
   }else{
@@ -697,33 +776,42 @@ function render(){
 
 /* ===== Auswertungsliste ===== */
 function drawOut(){
-  const {warn,sq,rows}=analyse();
+  const {warn,sq}=analyse();
+  const rows=summaryRows();
   $('#empty').style.display=(marks.length||open.length)?'none':'block';
   let h='';
   if(warn.size){
     h+='<div class="sec">Hinweis · Squat-Häufung</div>';
     [...warn].sort().forEach(k=>{
       const [r,side]=k.split('|');
-      h+=`<div class="rw"><b>Feld R${r} · ${side}</b><br>${sq[k]} Squats auf 30 m — Schienenerneuerung prüfen</div>`;
+      h+=`<div class="rw"><b>Feld R${r} · ${sideLbl(side)}</b><br>${sq[k]} Squats auf 30 m — Schienenerneuerung prüfen</div>`;
     });
   }
+  const nBef=marks.filter(m=>!isInfoMark(m)).length;
   if(rows.length){
-    h+='<div class="sec">Befunde ('+rows.length+')</div>';
-    h+=rows.map(m=>`
+    h+='<div class="sec">Befunde ('+nBef+')</div>';
+    h+=rows.map(m=>{
+      const grp=m.group&&m.count>1;
+      const info=isInfoMark(m);
+      const cntPfx=grp?m.count+'× ':'';
+      const meter=m.len>0?Math.round(m.dist)+'–'+Math.round(m.dist+m.len)
+                :grp?Math.round(m.dist)+'–'+Math.round(m.distMax):Math.round(m.dist);
+      const lab=m.len>0?Math.round(m.len)+' M LANG':grp?m.count+'× PUNKT':'PUNKT';
+      return `
       <div class="card" style="--c:${m.col}">
-        <div class="km">${Math.round(m.dist)}${m.len>0?'–'+Math.round(m.dist+m.len):''}<i>${m.len>0?Math.round(m.len)+' M LANG':'PUNKT'}</i></div>
+        <div class="km">${meter}<i>${lab}</i></div>
         <div class="bd">
-          <div class="t">${esc(m.name)}</div>
+          <div class="t">${cntPfx}${esc(m.name)}</div>
           <div class="tags">
-            <span class="tag">${findCat(m.cat).n.toUpperCase()}</span>
-            <span class="tag">${sideLbl(m.side).toUpperCase()}</span>
-            <span class="tag">R${m.r0===m.r1?m.r0:m.r0+'–'+m.r1}</span>
+            <span class="tag">${esc(findCat(m.cat).n.toUpperCase())}</span>
+            <span class="tag">${esc(sideLbl(m.side).toUpperCase())}</span>
+            ${info?'':`<span class="tag">R${m.r0===m.r1?m.r0:m.r0+'–'+m.r1}</span>`}
             <span class="tag" style="background:${m.col};color:#1b1d1e;font-weight:700">${esc(m.fix)}${m.over?' ⚠':''}</span>
           </div>
         </div>
-        <button class="pic${m.photo?' has':''}" data-p="${m.id}">${m.photo?`<img src="${m.photo}">`:'📷'}</button>
-        <button class="del" data-d="${m.id}">×</button>
-      </div>`).join('');
+        ${grp?'':`<button class="pic${m.photo?' has':''}" data-p="${m.id}">${m.photo?`<img src="${m.photo}">`:'📷'}</button>`}
+        ${grp?'':`<button class="del" data-d="${m.id}">×</button>`}
+      </div>`;}).join('');
   }
   $('#out').innerHTML=h;
   $('#out').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
@@ -744,10 +832,14 @@ $('#bStart').onclick=()=>{
     if(!confirm('Inspektion verwerfen? Alle Befunde und der Zähler werden gelöscht.'))return;
     start=null;last=null;dist=0;startPhoto=null;startTs=null;
     endPt=null;endTs=null;endDist=null;marks=[];open=[];
+    startName='';endName='';
     save();render();return;
   }
   if(!cur){toast('Noch kein GPS-Fix – kurz warten');return;}
   if(acc>MAX_ACC){toast('GPS zu ungenau (±'+Math.round(acc)+' m)');return;}
+  const nm=(prompt('Startbezeichnung (Startpunkt, meist Weiche), z.B. W12:')||'').trim();
+  if(!nm){toast('Startbezeichnung wird benötigt');return;}
+  pendingStartName=nm;
   toast('Startfoto aufnehmen');
   $('#startPic').click();
 };
@@ -756,13 +848,18 @@ $('#startPic').onchange=async e=>{
   if(!f){toast('Ohne Startfoto kein Start');return;}
   if(!cur){toast('GPS-Fix verloren');return;}
   try{startPhoto=await shrink(f,1400,.7);}catch(err){toast('Foto fehlgeschlagen');return;}
-  start=cur;last=cur;dist=0;startTs=new Date().toISOString();
-  save();render();toast('Startpunkt gesetzt');
+  start=cur;last=cur;dist=0;startTs=new Date().toISOString();startName=pendingStartName;
+  save();render();toast('Startpunkt gesetzt · '+startName);
 };
 $('#bEndPt').onclick=()=>{
   if(!start||closed())return;
   if(!cur){toast('Kein GPS-Fix');return;}
   if(open.length){toast(open.length+' Mangel noch offen – erst beenden');return;}
+  const nm=(prompt('Endbezeichnung (Endpunkt, optional), z.B. W14:',endName||'')||'').trim();
+  endName=nm;
+  if(!nm){
+    if(!confirm('Keine Endbezeichnung eingegeben. Trotzdem beenden?'))return;
+  }
   if(acc!=null&&acc>8){
     if(!confirm('Achtung: Das GPS-Signal ist aktuell ±'+Math.round(acc)+' m ungenau. Trotzdem beenden?'))return;
   }else{
@@ -780,28 +877,53 @@ $('#bPdf').onclick=async()=>{
   try{
     const {jsPDF}=window.jspdf,d=new jsPDF({unit:'mm',format:'a4'});
     const W=210,M=15;let y=M;
-    const {total,nR,warn,sq,rows}=analyse();
+    const A=analyse();
+    const {total,nR,warn,sq}=A;
+    const rawRows=A.rows;               // Einzel-Marken (für Fotos)
+    const rows=summaryRows();           // ggf. zusammengefasst (für Tabelle)
     const gl=trackName.trim()||'—';
+    const nBef=marks.filter(m=>!isInfoMark(m)).length;
+    const sleepers=Math.round(total*0.63);
+    let schwErn=0;
+    marks.filter(m=>m.cat==='schwelle'&&m.fixKind==='erneuern').forEach(m=>{schwErn+=m.len>0?Math.round(m.len*0.63):1;});
+    const sName=(route?.startName||startName||'').trim()||'—';
+    const eName=(route?.endName||endName||'').trim()||(closed()?'—':'nicht gesetzt');
 
-    d.setFillColor(27,29,30);d.rect(0,0,W,26,'F');
-    d.setTextColor(255);d.setFontSize(16);d.setFont('helvetica','bold');
-    d.text('INSPEKTIONSBERICHT GLEIS '+gl,M,13);
-    d.setFontSize(9);d.setFont('helvetica','normal');d.setTextColor(200);
-    d.text(new Date().toLocaleDateString('de-DE')+'  ·  '+rows.length+' Befunde',M,20);
-    y=34;d.setTextColor(0);
+    const LEG=[['#3fa34d','Kein Bedarf'],['#f2c200','Schleifen'],['#00b4d8','Fräsen'],
+      ['#ff7a1a','Schweißen'],['#2ea3a3','Beseitigen'],['#9b6dd8','Spur prüfen'],
+      ['#e0243b','Erneuern'],['#8b9094','Info / Freitext']];
 
-    d.setFont('helvetica','bold');d.setFontSize(10);d.text('STRECKENABSCHNITT',M,y);
-    d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(80);
-    d.text('Gleis: '+gl,M,y+6);
-    d.text('Start: '+(route?.start?route.start.lat.toFixed(6)+', '+route.start.lon.toFixed(6):'–')+
-      '   '+(route?.ts?new Date(route.ts).toLocaleDateString('de-DE'):'–'),M,y+11);
-    d.text('Ende:  '+(route?.endPt?route.endPt.lat.toFixed(6)+', '+route.endPt.lon.toFixed(6):'nicht gesetzt')+
-      '   '+(route?.endTs?new Date(route.endTs).toLocaleDateString('de-DE'):''),M,y+16);
-    d.setFont('helvetica','bold');
-    d.text('Länge: '+Math.round(total)+' m  ·  '+nR+' Schienenfelder à '+RAIL+' m'+(closed()?'':'  (nicht abgeschlossen)'),M,y+22);
-    d.setFont('helvetica','normal');
-    if(route?.photo){try{d.addImage(route.photo,'JPEG',W-M-52,y-4,52,39);d.setFontSize(6.5);d.setTextColor(140);d.text('Startfoto',W-M-52,y+38);}catch(e){}}
-    d.setTextColor(0);y+=52;
+    /* ---- Kopf mit Rahmen (kein schwarzer Balken) ---- */
+    const boxT=10,innerL=M+4;
+    let photoB=boxT;
+    if(route?.photo){try{d.addImage(route.photo,'JPEG',W-M-56,boxT+4,52,39);photoB=boxT+4+39;
+      d.setFontSize(6.5);d.setTextColor(140);d.text('Startfoto',W-M-56,boxT+46);}catch(e){}}
+    let by=boxT+9;d.setTextColor(0);
+    d.setFont('helvetica','bold');d.setFontSize(15);
+    d.text('INSPEKTIONSBERICHT · GLEIS '+gl,innerL,by);by+=6;
+    d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(90);
+    d.text(new Date().toLocaleDateString('de-DE'),innerL,by);by+=7;
+    d.setTextColor(0);d.setFont('helvetica','bold');d.setFontSize(9.5);
+    d.text('GLEISABSCHNITT',innerL,by);by+=5;
+    d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(70);
+    d.text('Start: '+sName,innerL,by);by+=4.6;
+    d.text('Ende:  '+eName,innerL,by);by+=4.6;
+    d.setFont('helvetica','bold');d.setTextColor(0);
+    d.text('Länge '+Math.round(total)+' m · '+nR+' Felder à '+RAIL+' m · '+nBef+' Befunde'+(closed()?'':'  (offen)'),innerL,by);by+=4.6;
+    d.text('ca. '+sleepers+' Schwellen · '+schwErn+' zu erneuern',innerL,by);by+=6.5;
+    /* Legende */
+    d.setFont('helvetica','bold');d.setFontSize(7.5);d.text('LEGENDE',innerL,by);by+=4;
+    (()=>{let lx=innerL,ly=by;const sw=3,maxX=W-M-4;
+      d.setFont('helvetica','normal');d.setFontSize(7);
+      LEG.forEach(([col,lab])=>{
+        const w=d.getTextWidth(lab)+sw+4;
+        if(lx+w>maxX){lx=innerL;ly+=5;}
+        const c=hexRgb(col);d.setFillColor(c[0],c[1],c[2]);d.rect(lx,ly-2.6,sw,sw,'F');
+        d.setTextColor(60);d.text(lab,lx+sw+1.2,ly);lx+=w+2;
+      });by=ly;})();
+    const boxB=Math.max(by+3,photoB+3);
+    d.setDrawColor(90);d.setLineWidth(.5);d.rect(M,boxT,W-2*M,boxB-boxT);
+    d.setTextColor(0);d.setLineWidth(.2);y=boxB+9;
 
     if(warn.size){
       d.setDrawColor(255,138,0);d.setLineWidth(.6);d.line(M,y-6,W-M,y-6);d.setLineWidth(.2);
@@ -826,23 +948,26 @@ $('#bPdf').onclick=async()=>{
     d.setTextColor(0);y+=2;d.line(M,y,W-M,y);y+=5;
 
     const clip=(s,n)=>{s=String(s);return s.length>n?s.slice(0,n-1)+'…':s;};
-    const katShort={schiene:'Schiene',schwelle:'Schwelle',sicht:'Sicht'};
+    const katShort={schiene:'Schiene',schwelle:'Schwelle',sicht:'Befest.',bau:'Bauwerk'};
     d.setFontSize(8.5);
     rows.forEach(m=>{
       if(y>282){d.addPage();y=M;}
+      const grp=m.group&&m.count>1,info=isInfoMark(m);
       const c=hexRgb(m.col);
       d.setFillColor(c[0],c[1],c[2]);d.rect(M-3.5,y-3.2,2,4,'F');
       d.setFont('helvetica','bold');
-      d.text(String(Math.round(m.dist))+(m.len>0?'–'+Math.round(m.dist+m.len):''),CM,y);
+      const meter=m.len>0?Math.round(m.dist)+'–'+Math.round(m.dist+m.len)
+                :grp?Math.round(m.dist)+'–'+Math.round(m.distMax):String(Math.round(m.dist));
+      d.text(meter,CM,y);
       d.setFont('helvetica','normal');
-      d.text('R'+(m.r0===m.r1?m.r0:m.r0+'–'+m.r1),CF,y);
+      d.text(info?'–':'R'+(m.r0===m.r1?m.r0:m.r0+'–'+m.r1),CF,y);
       d.text(sideLbl(m.side),CS,y);
       d.text(katShort[m.cat]||m.cat,CK,y);
-      d.text(clip(m.name,26),CE,y);
+      d.text(clip((grp?m.count+'× ':'')+m.name,26),CE,y);
       d.setFont('helvetica',m.over?'bold':'normal');
       d.text(clip(m.fix+(m.over?' ⚠':''),21),CA,y);
       d.setFont('helvetica','normal');
-      d.text(m.len>0?m.len.toFixed(1)+' m':'punkt.',CL,y);
+      d.text(m.len>0?m.len.toFixed(1)+' m':grp?m.count+'×':info?'–':'punkt.',CL,y);
       y+=5.4;
     });
     if(warn.size){
@@ -865,7 +990,7 @@ $('#bPdf').onclick=async()=>{
     }catch(e){/* Gleisbild optional */}
 
     /* Foto-Anhang */
-    const withPhoto=rows.filter(m=>m.photo);
+    const withPhoto=rawRows.filter(m=>m.photo);
     if(withPhoto.length){
       const boxW=82,boxH=58,cellH=70,colX=[M,M+98];
       const fotoHead=()=>{d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(0);d.text('FOTOS · '+gl,M,M+4);};
