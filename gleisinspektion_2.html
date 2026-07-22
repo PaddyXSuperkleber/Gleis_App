@@ -213,12 +213,15 @@ const CATS=[
     {id:'ff',  n:'Fahrflächenfehler', mode:'p'},
     {id:'sq',  n:'Squat',             mode:'p'},
     {id:'rif', n:'Riffelbildung',     mode:'r'},
-    {id:'hc',  n:'Head Checks',       mode:'r'}
+    {id:'hc',  n:'Head Checks',       mode:'r'},
+    {id:'sv',  n:'Seitenverschleiß',  mode:'r'}
   ]},
   {id:'schwelle', n:'Schwelle',    c:'#8c4b28', sides:false, types:[
     {id:'vg',  n:'Verwittert & Gerissen', mode:'p'},
     {id:'bio', n:'Biologischer Zerfall',  mode:'p'},
-    {id:'ers', n:'Schwelle Erneuern',     mode:'p'}
+    {id:'riss',n:'Rissbildung',           mode:'p'},
+    {id:'geb', n:'Gebrochen',             mode:'p'},
+    {id:'lr',  n:'Längsriss',             mode:'p'}
   ]},
   {id:'sicht', n:'Sichtprüfung',   c:'#4b7a8c', sides:true,  types:[
     {id:'schm', n:'Schottermangel',       mode:'p'},
@@ -464,8 +467,8 @@ async function hit(catId,tid,side){
     open.push({key:k,cat:catId,type:tid,side,dist,ts:new Date().toISOString()});
     save();render();toast(t.n+' offen ab '+Math.round(dist)+' m');
   }else{
-    const len=dist-run.dist;
-    if(len<1){toast('Noch keine Strecke seit Beginn');return;}
+    let len=dist-run.dist;
+    if(len<2)len=2;   // GPS erfasst kurze Fehler oft nicht -> Standard 2 m
     const mm=await chooseMeasure(catId,t.n+' · '+sideLbl(side)+' · '+len.toFixed(0)+' m');
     if(!mm)return;
     open=open.filter(o=>o.key!==k);
