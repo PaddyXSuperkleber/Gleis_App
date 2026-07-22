@@ -129,7 +129,12 @@ main{padding:12px 14px 30px}
 .card .t{font-family:'Oswald';font-size:.92rem;letter-spacing:.03em}
 .card .tags{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
 .tag{font-family:'IBM Plex Mono';font-size:.6rem;padding:2px 5px;background:var(--schotter-3);letter-spacing:.04em}
+.card .pic{flex:none;width:38px;height:38px;border:1px solid var(--line);background:var(--schotter-3);font-size:1.1rem;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
+.card .pic img{width:100%;height:100%;object-fit:cover}
+.card .pic.has{border-color:var(--gruen)}
 .card .del{background:none;color:#5f6468;font-size:1.3rem;line-height:1;padding:2px 4px;flex:none}
+.sh-img{display:block;width:100%;max-height:46vh;object-fit:contain;background:var(--schotter);border:1px solid var(--line);margin-bottom:12px}
+.sh-nopic{padding:22px;text-align:center;color:var(--kies);font-family:'Oswald';letter-spacing:.08em;border:1px dashed var(--line);margin-bottom:12px}
 .rw{background:var(--schotter-2);border-left:5px solid var(--warn);padding:9px 11px;margin-bottom:7px;font-size:.82rem;line-height:1.4}
 .rw b{font-family:'Oswald';letter-spacing:.04em}
 
@@ -177,6 +182,7 @@ main{padding:12px 14px 30px}
       <span><i style="background:#00b4d8"></i>Fräsen</span>
       <span><i style="background:#ff7a1a"></i>Schweißen</span>
       <span><i style="background:#2ea3a3"></i>Beseitigen</span>
+      <span><i style="background:#9b6dd8"></i>Spur prüfen</span>
       <span><i style="background:#e0243b"></i>Erneuern</span>
       <span><i style="background:#8b9094"></i>Freitext</span>
     </div>
@@ -199,6 +205,7 @@ main{padding:12px 14px 30px}
 </main>
 
 <input type="file" id="startPic" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+<input type="file" id="markPic" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
@@ -224,10 +231,12 @@ const CATS=[
     {id:'lr',  n:'Längsriss',             mode:'p'}
   ]},
   {id:'sicht', n:'Sichtprüfung',   c:'#4b7a8c', sides:true,  types:[
-    {id:'schm', n:'Schottermangel',       mode:'p'},
-    {id:'kll',  n:'Kleineisen lose',      mode:'p'},
-    {id:'kld',  n:'Kleineisen Defekt',    mode:'p'},
-    {id:'klk',  n:'Kleineisen Korrodiert',mode:'p'}
+    {id:'schm', n:'Schottermangel',        mode:'p'},
+    {id:'kll',  n:'Kleineisen lose',       mode:'p'},
+    {id:'kld',  n:'Kleineisen Defekt',     mode:'p'},
+    {id:'klk',  n:'Kleineisen Korrodiert', mode:'p'},
+    {id:'rpg',  n:'Rippenplatte gebrochen',mode:'p'},
+    {id:'rpe',  n:'Rippenplatte eingefahren',mode:'p'}
   ]}
 ];
 const MEASURES={
@@ -248,10 +257,11 @@ const MEASURES={
     {id:'kh',        n:'Kein Handlungsbedarf', c:'#3fa34d'},
     {id:'erneuern',  n:'Erneuern',             c:'#e0243b'},
     {id:'beseitigen',n:'Beseitigen',           c:'#2ea3a3'},
+    {id:'spur',      n:'Spur überprüfen',      c:'#9b6dd8'},
     {id:'frei',      n:'Freitext',             c:'#8b9094'}
   ]
 };
-const RANK={kh:0,frei:1,schleifen:1,fraesen:2,beseitigen:2,schweissen:3,erneuern:4};
+const RANK={kh:0,frei:1,schleifen:1,spur:1,fraesen:2,beseitigen:2,schweissen:3,erneuern:4};
 const FREE={id:'free',n:'Freitext',mode:'p'};
 
 const RAIL=30, SQUAT_LIMIT=6;
@@ -301,11 +311,17 @@ function hav(a,b){
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2400);}
 function save(){
-  localStorage.setItem('gi2_m',JSON.stringify(marks));
-  localStorage.setItem('gi2_o',JSON.stringify(open));
-  localStorage.setItem('gi2_n',trackName);
-  const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
-  localStorage.setItem('gi2_r',JSON.stringify(r));route=r;
+  try{
+    localStorage.setItem('gi2_m',JSON.stringify(marks));
+    localStorage.setItem('gi2_o',JSON.stringify(open));
+    localStorage.setItem('gi2_n',trackName);
+    const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist}:null;
+    localStorage.setItem('gi2_r',JSON.stringify(r));route=r;
+    return true;
+  }catch(e){
+    toast('Speicher voll – Foto evtl. nicht gesichert. PDF bald erstellen.');
+    return false;
+  }
 }
 function shrink(file,max,q){
   return new Promise((res,rej)=>{
@@ -433,10 +449,53 @@ function chooseMeasure(catId,sub){
   });
 }
 function addMark(o){
-  marks.push({id:rid(),cat:o.cat,type:o.type,errText:o.errText||'',side:o.side,
+  const m={id:rid(),cat:o.cat,type:o.type,errText:o.errText||'',side:o.side,
     dist:o.dist,len:o.len||0,ts:o.ts||new Date().toISOString(),tsEnd:o.tsEnd,
-    fix:o.mm.fix,col:o.mm.col,fixKind:o.mm.kind});
+    fix:o.mm.fix,col:o.mm.col,fixKind:o.mm.kind,photo:null};
+  marks.push(m);
   marks.sort((a,b)=>a.dist-b.dist);save();render();
+  return m;
+}
+/* Kamera -> dataURL (null wenn abgebrochen) */
+function takePhoto(){
+  return new Promise(res=>{
+    const inp=$('#markPic');inp.value='';
+    inp.onchange=async e=>{
+      const f=e.target.files[0];e.target.value='';
+      if(!f){res(null);return;}
+      try{res(await shrink(f,1000,.55));}catch(err){toast('Foto fehlgeschlagen');res(null);}
+    };
+    inp.click();
+  });
+}
+async function attachPhoto(id){
+  const ph=await takePhoto();
+  if(!ph)return;
+  const m=marks.find(x=>x.id===id);if(!m)return;
+  m.photo=ph;save();render();toast('Foto hinzugefügt');
+}
+function askPhoto(m){
+  if(m&&confirm('Foto vom Mangel aufnehmen?'))attachPhoto(m.id);
+}
+/* Foto ansehen / hinzufügen / entfernen */
+function photoSheet(id){
+  const m=marks.find(x=>x.id===id);if(!m)return;
+  const sheet=$('#sheet'),bg=$('#sheetBg');
+  sheet.innerHTML=`<div class="sh-h">Mangel-Foto</div>
+    <div class="sh-sub">${esc(markName(m))} · ${esc(sideLbl(m.side))} · ${Math.round(m.dist)} m</div>
+    ${m.photo?`<img class="sh-img" src="${m.photo}">`:'<div class="sh-nopic">Noch kein Foto</div>'}
+    <div class="sh-btns">
+      <button class="mb" data-a="cam" style="--c:#4b7a8c">${m.photo?'Neues Foto':'Foto aufnehmen'}</button>
+      ${m.photo?'<button class="mb" data-a="del" style="--c:#e0243b">Entfernen</button>':''}
+    </div>
+    <button class="sh-x">Schließen</button>`;
+  const close=()=>{bg.classList.remove('show');sheet.classList.remove('show');};
+  bg.classList.add('show');sheet.classList.add('show');
+  bg.onclick=close;sheet.querySelector('.sh-x').onclick=close;
+  sheet.querySelectorAll('.mb').forEach(b=>b.onclick=async()=>{
+    if(b.dataset.a==='del'){m.photo=null;save();render();close();return;}
+    close();await attachPhoto(id);
+  });
 }
 async function hit(catId,tid,side){
   if(!start||closed())return;
@@ -448,8 +507,9 @@ async function hit(catId,tid,side){
     const at=dist;
     const mm=await chooseMeasure(catId,name+' · '+sideLbl(side));
     if(!mm)return;
-    addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm});
+    const m1=addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm});
     toast(name+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
+    askPhoto(m1);
     return;
   }
   const t=findType(catId,tid),k=keyOf(catId,tid,side);
@@ -457,8 +517,9 @@ async function hit(catId,tid,side){
     const at=dist;
     const mm=await chooseMeasure(catId,t.n+' · '+sideLbl(side));
     if(!mm)return;
-    addMark({cat:catId,type:tid,side,dist:at,len:0,mm});
+    const m2=addMark({cat:catId,type:tid,side,dist:at,len:0,mm});
     toast(t.n+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
+    askPhoto(m2);
     return;
   }
   /* Bereich */
@@ -472,8 +533,9 @@ async function hit(catId,tid,side){
     const mm=await chooseMeasure(catId,t.n+' · '+sideLbl(side)+' · '+len.toFixed(0)+' m');
     if(!mm)return;
     open=open.filter(o=>o.key!==k);
-    addMark({cat:catId,type:tid,side,dist:run.dist,len,ts:run.ts,tsEnd:new Date().toISOString(),mm});
+    const m3=addMark({cat:catId,type:tid,side,dist:run.dist,len,ts:run.ts,tsEnd:new Date().toISOString(),mm});
     toast(t.n+' · '+len.toFixed(0)+' m · '+sideLbl(side));
+    askPhoto(m3);
   }
 }
 
@@ -507,7 +569,9 @@ function computeTrack(W,zoomv){
     if(fld[r])jt+=`<rect x="${xL-15}" y="${y0}" width="${gauge+30}" height="${Math.max(1,y1-y0)}" fill="${fld[r].col}" opacity=".08"/>`;
     jt+=`<line x1="${xL-19}" y1="${y0}" x2="${xL+7}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>
          <line x1="${xR-7}" y1="${y0}" x2="${xR+19}" y2="${y0}" stroke="#8b9094" stroke-width="2"/>`;
-    if(y1-y0>12)jt+=`<text class="joint-lbl" x="${cx}" y="${(y0+y1)/2+3}" text-anchor="middle" fill="${fld[r]?fld[r].col:'#5a5f63'}">R${r}</text>`;
+    const fa=(r-1)*RAIL,fb=Math.round(Math.min(r*RAIL,span));
+    const cnt=rows.filter(m=>m.r0<=r&&m.r1>=r).length;
+    if(y1-y0>10)jt+=`<text class="joint-lbl" x="${xR+22}" y="${(y0+y1)/2+3}" text-anchor="start" fill="${fld[r]?fld[r].col:'#8b9094'}">${fa}–${fb} m${cnt?' · '+cnt+' F':''}</text>`;
   }
   const yE=y(Math.min(nF*RAIL,span));
   jt+=`<line x1="${xL-19}" y1="${yE}" x2="${xL+7}" y2="${yE}" stroke="#8b9094" stroke-width="2"/>
@@ -657,6 +721,7 @@ function drawOut(){
             <span class="tag" style="background:${m.col};color:#1b1d1e;font-weight:700">${esc(m.fix)}${m.over?' ⚠':''}</span>
           </div>
         </div>
+        <button class="pic${m.photo?' has':''}" data-p="${m.id}">${m.photo?`<img src="${m.photo}">`:'📷'}</button>
         <button class="del" data-d="${m.id}">×</button>
       </div>`).join('');
   }
@@ -668,6 +733,7 @@ function drawOut(){
     if(!confirm(markName(m)+' bei '+Math.round(m.dist)+' m löschen?'))return;
     marks.splice(j,1);save();render();
   });
+  $('#out').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>photoSheet(b.dataset.p));
 }
 
 /* ===== Start / Ende ===== */
@@ -697,7 +763,11 @@ $('#bEndPt').onclick=()=>{
   if(!start||closed())return;
   if(!cur){toast('Kein GPS-Fix');return;}
   if(open.length){toast(open.length+' Mangel noch offen – erst beenden');return;}
-  if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen?'))return;
+  if(acc!=null&&acc>8){
+    if(!confirm('Achtung: Das GPS-Signal ist aktuell ±'+Math.round(acc)+' m ungenau. Trotzdem beenden?'))return;
+  }else{
+    if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen?'))return;
+  }
   endPt=cur;endDist=dist;endTs=new Date().toISOString();
   save();render();toast('Abgeschlossen · '+Math.round(endDist)+' m');
 };
@@ -717,16 +787,16 @@ $('#bPdf').onclick=async()=>{
     d.setTextColor(255);d.setFontSize(16);d.setFont('helvetica','bold');
     d.text('INSPEKTIONSBERICHT GLEIS '+gl,M,13);
     d.setFontSize(9);d.setFont('helvetica','normal');d.setTextColor(200);
-    d.text(new Date().toLocaleString('de-DE')+'  ·  '+rows.length+' Befunde',M,20);
+    d.text(new Date().toLocaleDateString('de-DE')+'  ·  '+rows.length+' Befunde',M,20);
     y=34;d.setTextColor(0);
 
     d.setFont('helvetica','bold');d.setFontSize(10);d.text('STRECKENABSCHNITT',M,y);
     d.setFont('helvetica','normal');d.setFontSize(8.5);d.setTextColor(80);
     d.text('Gleis: '+gl,M,y+6);
     d.text('Start: '+(route?.start?route.start.lat.toFixed(6)+', '+route.start.lon.toFixed(6):'–')+
-      '   '+(route?.ts?new Date(route.ts).toLocaleString('de-DE'):'–'),M,y+11);
+      '   '+(route?.ts?new Date(route.ts).toLocaleDateString('de-DE'):'–'),M,y+11);
     d.text('Ende:  '+(route?.endPt?route.endPt.lat.toFixed(6)+', '+route.endPt.lon.toFixed(6):'nicht gesetzt')+
-      '   '+(route?.endTs?new Date(route.endTs).toLocaleString('de-DE'):''),M,y+16);
+      '   '+(route?.endTs?new Date(route.endTs).toLocaleDateString('de-DE'):''),M,y+16);
     d.setFont('helvetica','bold');
     d.text('Länge: '+Math.round(total)+' m  ·  '+nR+' Schienenfelder à '+RAIL+' m'+(closed()?'':'  (nicht abgeschlossen)'),M,y+22);
     d.setFont('helvetica','normal');
@@ -793,6 +863,29 @@ $('#bPdf').onclick=async()=>{
       d.addImage(im.data,'PNG',ix,py,tw,th);
       d.setDrawColor(190);d.setLineWidth(.3);d.rect(ix,py,tw,th);
     }catch(e){/* Gleisbild optional */}
+
+    /* Foto-Anhang */
+    const withPhoto=rows.filter(m=>m.photo);
+    if(withPhoto.length){
+      const boxW=82,boxH=58,cellH=70,colX=[M,M+98];
+      const fotoHead=()=>{d.setFont('helvetica','bold');d.setFontSize(11);d.setTextColor(0);d.text('FOTOS · '+gl,M,M+4);};
+      d.addPage();fotoHead();
+      let py=M+12,col=0;
+      withPhoto.forEach(m=>{
+        if(col===0&&py+cellH>297-M){d.addPage();fotoHead();py=M+12;}
+        const bx=colX[col];
+        let iw=boxW,ih=boxH;
+        try{const pr=d.getImageProperties(m.photo);const s=Math.min(boxW/pr.width,boxH/pr.height);iw=pr.width*s;ih=pr.height*s;}catch(e){}
+        d.setDrawColor(200);d.setLineWidth(.3);d.rect(bx,py,boxW,boxH);
+        try{d.addImage(m.photo,'JPEG',bx+(boxW-iw)/2,py+(boxH-ih)/2,iw,ih);}catch(e){}
+        d.setFont('helvetica','bold');d.setFontSize(8.5);d.setTextColor(0);
+        d.text(clip(Math.round(m.dist)+(m.len>0?'–'+Math.round(m.dist+m.len):'')+' m · '+sideLbl(m.side),42),bx,py+boxH+5);
+        d.setFont('helvetica','normal');d.setFontSize(8);d.setTextColor(70);
+        d.text(clip(m.name+' → '+m.fix,46),bx,py+boxH+9.5);
+        d.setTextColor(0);
+        col++;if(col>=2){col=0;py+=cellH;}
+      });
+    }
 
     d.save((gl==='—'?'Gleis':gl)+' Inspektion Gleis.pdf');
   }catch(err){
