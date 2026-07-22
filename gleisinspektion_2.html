@@ -585,16 +585,19 @@ function drawTrack(){
   $('#rsAff').style.color=Object.keys(R.fld).length?'var(--warn)':'var(--kalk)';
 }
 
-/* SVG -> PNG für PDF */
+/* SVG -> PNG für PDF (heller Grund zum Ausdrucken) */
 async function trackPng(){
   const R=computeTrack(260,1);
   let inner=R.inner;
-  const rep={'var(--stahl)':'#6f7679','var(--gruen)':'#3fa34d','var(--kalk)':'#e8e6e1','var(--signal)':'#e0243b','var(--schotter)':'#1b1d1e'};
+  const rep={'var(--stahl)':'#5b6164','var(--gruen)':'#3fa34d','var(--kalk)':'#141618','var(--signal)':'#e0243b','var(--schotter)':'#ffffff'};
   Object.entries(rep).forEach(([k,v])=>{inner=inner.split(k).join(v);});
+  // Für Dunkeldesign gedachte Festfarben auf Weiß umsetzen:
+  inner=inner.split('#3a3d3f').join('#d9d5cd')  // Schwellen-Raster hell
+             .split('#e8e6e1').join('#141618');  // Positions-Label dunkel
   const doc=`<svg xmlns="http://www.w3.org/2000/svg" width="${R.W}" height="${R.H}" viewBox="0 0 ${R.W} ${R.H}">`
-    +`<style>.rail-lbl{font-family:sans-serif;font-size:9px;fill:#8b9094}.tick-lbl{font-family:monospace;font-size:8px;fill:#5f6468}`
-    +`.joint-lbl{font-family:monospace;font-size:7.5px;fill:#6f7679}.mk-lbl{font-family:monospace;font-size:8px;font-weight:700}</style>`
-    +`<rect width="${R.W}" height="${R.H}" fill="#1b1d1e"/>${inner}</svg>`;
+    +`<style>.rail-lbl{font-family:sans-serif;font-size:9px;fill:#6a6f72}.tick-lbl{font-family:monospace;font-size:8px;fill:#7a7f82}`
+    +`.joint-lbl{font-family:monospace;font-size:7.5px;fill:#6a6f72}.mk-lbl{font-family:monospace;font-size:8px;font-weight:700}</style>`
+    +`<rect width="${R.W}" height="${R.H}" fill="#ffffff"/>${inner}</svg>`;
   const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(doc);
   const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('svg'));i.src=url;});
   const sc=2,c=document.createElement('canvas');
@@ -786,7 +789,9 @@ $('#bPdf').onclick=async()=>{
       d.text('GLEISBILD · '+gl,M,py+4);py+=10;
       let tw=80,th=tw*im.H/im.W;const maxH=297-py-M;
       if(th>maxH){th=maxH;tw=th*im.W/im.H;}
-      d.addImage(im.data,'PNG',(W-tw)/2,py,tw,th);
+      const ix=(W-tw)/2;
+      d.addImage(im.data,'PNG',ix,py,tw,th);
+      d.setDrawColor(190);d.setLineWidth(.3);d.rect(ix,py,tw,th);
     }catch(e){/* Gleisbild optional */}
 
     d.save((gl==='—'?'Gleis':gl)+' Inspektion Gleis.pdf');
