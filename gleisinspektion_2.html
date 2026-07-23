@@ -65,8 +65,8 @@ header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bott
 .bar button:disabled{color:#5a5f63}
 
 /* ===== Kategorie-Umschalter ===== */
-.catrow{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--line)}
-.catrow .catb{padding:12px 2px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.01em;font-size:.64rem;font-weight:600;color:var(--kies)}
+.catrow{display:flex;flex-wrap:wrap;gap:2px;background:var(--line)}
+.catrow .catb{flex:1 1 28%;min-width:80px;padding:12px 2px;background:var(--schotter-2);font-family:'Oswald';text-transform:uppercase;letter-spacing:.01em;font-size:.64rem;font-weight:600;color:var(--kies)}
 .catrow .catb:active{background:var(--schotter-3)}
 .catrow .catb.act{background:var(--warn);color:#1b1d1e}
 
@@ -243,6 +243,16 @@ const CATS=[
     {id:'iso', n:'ISO-Stoß',    mode:'p'},
     {id:'sig', n:'Signal',      mode:'p'},
     {id:'spr', n:'Sprechsäule', mode:'p'}
+  ]},
+  {id:'band', n:'Schienenband', c:'#8b9094', sides:true, info:true, noFree:true, types:[
+    {id:'mast',  n:'Mast',          mode:'p', ask:'name'},
+    {id:'schutz',n:'Schutzschiene', mode:'r'},
+    {id:'bue',   n:'Bahnübergang',  mode:'r', fixed:'beide', ask:'name'},
+    {id:'form',  n:'Schienenform',  mode:'r', ask:'form'},
+    {id:'erde',  n:'Erde',          mode:'p'},
+    {id:'achs',  n:'Achszähler',    mode:'p', ask:'name'},
+    {id:'sh',    n:'Schienenhöhe',  mode:'p', special:'sh'},
+    {id:'iso',   n:'ISO',           mode:'p', ask:'iso'}
   ]}
 ];
 const MEASURES={
@@ -274,7 +284,7 @@ const RAIL=30, SQUAT_LIMIT=6;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const clipS=(s,n)=>{s=String(s);return s.length>n?s.slice(0,n-1)+'…':s;};
-const isInfoMark=m=>m.cat==='bau'||m.type==='sh';
+const isInfoMark=m=>m.cat==='bau'||m.cat==='band'||m.type==='sh';
 const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const findCat=id=>CATS.find(c=>c.id===id);
 const findType=(cat,id)=>id==='free'?FREE:(findCat(cat)?.types.find(t=>t.id===id)||{id,n:id,mode:'p'});
@@ -282,7 +292,7 @@ const keyOf=(cat,t,s)=>cat+'|'+t+'|'+s;
 const railNo=m=>Math.floor(m/RAIL)+1;
 const sideLbl=s=>s==='beide'?'L&R':s==='links'?'Links':s==='rechts'?'Rechts':s;
 const markName=m=>{
-  if(m.cat==='bau'){
+  if(m.cat==='bau'||m.cat==='band'){
     if(m.type==='free')return m.errText||'Info';
     const base=findType(m.cat,m.type).n;
     return base+(m.errText?' '+m.errText:'');
@@ -433,7 +443,7 @@ function fbHtml(catId,t,side){
 function buildPad(){
   const cat=findCat(curCat);
   const pad=$('#pad');
-  const col=side=>cat.types.map(t=>fbHtml(cat.id,t,side)).join('')+fbHtml(cat.id,FREE,side);
+  const col=side=>cat.types.map(t=>fbHtml(cat.id,t,t.fixed||side)).join('')+(cat.noFree?'':fbHtml(cat.id,FREE,side));
   if(cat.sides){
     padOne=false;
     pad.innerHTML=`<div class="pcol"><div class="phead">LINKS</div>${col('links')}</div>
@@ -481,6 +491,28 @@ function chooseMeasure(catId,sub){
       }else close({fix:m.n,col:m.c,kind:m.id});
     });
   });
+}
+/* Generische Auswahl (Schienenform, ISO-Bezeichnung …) */
+function chooseOption(title,sub,opts){
+  return new Promise(res=>{
+    const sheet=$('#sheet'),bg=$('#sheetBg');
+    sheet.innerHTML=`<div class="sh-h">${esc(title)}</div>
+      ${sub?`<div class="sh-sub">${esc(sub)}</div>`:''}
+      <div class="sh-btns">${opts.map((o,i)=>`<button class="mb" data-i="${i}" style="--c:#8b9094">${esc(o)}</button>`).join('')}</div>
+      <button class="sh-x">Abbrechen</button>`;
+    const close=v=>{bg.classList.remove('show');sheet.classList.remove('show');res(v);};
+    bg.classList.add('show');sheet.classList.add('show');
+    bg.onclick=()=>close(null);
+    sheet.querySelector('.sh-x').onclick=()=>close(null);
+    sheet.querySelectorAll('.mb').forEach(b=>b.onclick=()=>close(opts[+b.dataset.i]));
+  });
+}
+/* Zusatzabfrage je Schienenband-Typ: '' = keine, null = abgebrochen */
+async function bandAsk(t){
+  if(t.ask==='name')return (prompt(t.n+' – Name eingeben:')||'').trim();
+  if(t.ask==='form')return chooseOption('Schienenform wählen',t.n,['S54','S49','UIC60']);
+  if(t.ask==='iso')return chooseOption('ISO-Bezeichnung wählen',t.n,['IVG30','MT-Stoß','IVG30 Überbrückt','MT-Stoß Überbrückt']);
+  return '';
 }
 function addMark(o){
   const m={id:rid(),cat:o.cat,type:o.type,errText:o.errText||'',side:o.side,
@@ -557,6 +589,32 @@ async function hit(catId,tid,side){
     const bez=(prompt(t.n+' – Bezeichnung (z.B. IVG 30):')||'').trim();
     const mB=addMark({cat:catId,type:tid,errText:bez,side,dist,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
     toast(t.n+(bez?' '+bez:'')+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');askPhoto(mB);return;
+  }
+
+  /* Schienenband: Zustandsaufnahme, keine Maßnahme, kein Fotoprompt */
+  if(catId==='band'){
+    const mm={fix:'Info',col:cat.c,kind:'info'};
+    if(t.mode==='r'){
+      const k=keyOf(catId,tid,side);
+      const run=open.find(o=>o.key===k);
+      if(!run){
+        let extra='';
+        if(t.ask){extra=await bandAsk(t);if(extra===null)return;}
+        open.push({key:k,cat:catId,type:tid,side,dist,ts:new Date().toISOString(),extra:extra||''});
+        save();render();toast(t.n+(extra?' '+extra:'')+' offen ab '+Math.round(dist)+' m');
+      }else{
+        let len=dist-run.dist;if(len<2)len=2;
+        open=open.filter(o=>o.key!==k);
+        addMark({cat:catId,type:tid,side,dist:run.dist,len,errText:run.extra||'',ts:run.ts,tsEnd:new Date().toISOString(),mm});
+        toast(t.n+(run.extra?' '+run.extra:'')+' · '+len.toFixed(0)+' m');
+      }
+      return;
+    }
+    let extra='';
+    if(t.ask){extra=await bandAsk(t);if(extra===null)return;}
+    addMark({cat:catId,type:tid,side,dist,len:0,errText:extra||'',mm});
+    toast(t.n+(extra?' '+extra:'')+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');
+    return;
   }
 
   /* Freitext-Fehler (Schiene/Schwelle/Befestigung) – punktuell, kein Fotoprompt */
@@ -668,6 +726,55 @@ function computeTrack(W,zoomv){
       fx+=`<g class="mk" data-i="${i}">
         <line x1="${rx}" y1="${y1}" x2="${ex}" y2="${y1}" stroke="#8b9094" stroke-width="2"/>
         <text x="${ex+dir*3}" y="${y1+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7.5" font-weight="700" fill="#8b9094">SH ${esc(m.val||'')}</text></g>`;
+      return;
+    }
+    /* ===== Schienenband-Symbole ===== */
+    if(m.cat==='band'){
+      const bx=xOf(m.side),dir=m.side==='rechts'?1:-1;
+      const nm=m.errText?esc(clipS(m.errText,14)):'';
+      const yb=Math.max(y2,y1+4);
+      if(m.type==='mast'){
+        const mx=m.side==='rechts'?xR+13:xL-13;
+        fx+=`<g class="mk" data-i="${i}">
+          <rect x="${mx-2.5}" y="${y1-7}" width="5" height="14" fill="#8b9094"/>
+          <text x="${mx+dir*5}" y="${y1+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7" fill="#8b9094">Mast${nm?' '+nm:''}</text></g>`;
+        return;
+      }
+      if(m.type==='schutz'){
+        const sx=m.side==='rechts'?xR-8:xL+8;
+        fx+=`<g class="mk" data-i="${i}"><line x1="${sx}" y1="${y1}" x2="${sx}" y2="${yb}" stroke="#8b9094" stroke-width="4"/></g>`;
+        return;
+      }
+      if(m.type==='bue'){
+        const bw=gauge-6;
+        fx+=`<g class="mk" data-i="${i}">
+          <rect x="${cx-bw/2}" y="${y1}" width="${bw}" height="${Math.max(yb-y1,5)}" fill="#8b9094" opacity=".5" stroke="#6f7679" stroke-width="1"/>
+          <text x="${cx}" y="${(y1+yb)/2+3}" text-anchor="middle" font-family="monospace" font-size="7" fill="#4f5356">BÜ${nm?' '+nm:''}</text></g>`;
+        return;
+      }
+      if(m.type==='form'){
+        const fx0=m.side==='rechts'?xR+6:xL-6;
+        fx+=`<g class="mk" data-i="${i}">
+          <line x1="${fx0}" y1="${y1}" x2="${fx0}" y2="${yb}" stroke="#8b9094" stroke-width="2"/>
+          <text x="${fx0+dir*3}" y="${(y1+yb)/2+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7.5" font-weight="700" fill="#8b9094">${nm||'?'}</text></g>`;
+        return;
+      }
+      if(m.type==='erde'){
+        fx+=`<g class="mk" data-i="${i}"><circle cx="${bx}" cy="${y1}" r="4" fill="#111111"/></g>`;
+        return;
+      }
+      if(m.type==='achs'){
+        fx+=`<g class="mk" data-i="${i}"><rect x="${bx-4}" y="${y1-4}" width="8" height="8" fill="#111111"/>${nm?`<text x="${bx+dir*7}" y="${y1+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="6.5" fill="#111111">${nm}</text>`:''}</g>`;
+        return;
+      }
+      if(m.type==='iso'){
+        const w=7;
+        fx+=`<g class="mk" data-i="${i}">
+          <line x1="${bx-w}" y1="${y1-w}" x2="${bx+w}" y2="${y1-w}" stroke="#111111" stroke-width="2"/>
+          <line x1="${bx+w}" y1="${y1-w}" x2="${bx-w}" y2="${y1+w}" stroke="#111111" stroke-width="2"/>
+          <line x1="${bx-w}" y1="${y1+w}" x2="${bx+w}" y2="${y1+w}" stroke="#111111" stroke-width="2"/></g>`;
+        return;
+      }
       return;
     }
     const x=xOf(m.side);
@@ -948,7 +1055,7 @@ $('#bPdf').onclick=async()=>{
     d.setTextColor(0);y+=2;d.line(M,y,W-M,y);y+=5;
 
     const clip=(s,n)=>{s=String(s);return s.length>n?s.slice(0,n-1)+'…':s;};
-    const katShort={schiene:'Schiene',schwelle:'Schwelle',sicht:'Befest.',bau:'Bauwerk'};
+    const katShort={schiene:'Schiene',schwelle:'Schwelle',sicht:'Befest.',bau:'Bauwerk',band:'Band'};
     d.setFontSize(8.5);
     rows.forEach(m=>{
       if(y>282){d.addPage();y=M;}
