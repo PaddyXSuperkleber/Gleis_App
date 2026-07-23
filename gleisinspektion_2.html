@@ -50,7 +50,11 @@ header{position:sticky;top:0;z-index:20;background:var(--schotter-2);border-bott
 
 .meter{padding:16px 14px 12px;text-align:center;background:repeating-linear-gradient(90deg,transparent 0 26px,var(--stripe) 26px 30px),var(--schotter);border-bottom:2px solid var(--line)}
 .meter .lab{font-family:'Oswald';font-size:.68rem;letter-spacing:.2em;color:var(--kies)}
-.meter .val{font-family:'IBM Plex Mono';font-weight:700;font-size:clamp(2.8rem,15vw,4.4rem);line-height:.94;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin:2px 0}
+.meter .valrow{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0}
+.meter .val{font-family:'IBM Plex Mono';font-weight:700;font-size:clamp(2.8rem,15vw,4.4rem);line-height:.94;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.madj{flex:none;width:52px;height:52px;border-radius:50%;background:var(--schotter-3);border:1px solid var(--line);color:var(--kalk);font-family:'IBM Plex Mono';font-weight:700;font-size:.98rem;line-height:1;display:flex;align-items:center;justify-content:center}
+.madj:active{background:var(--warn);color:#1b1d1e}
+.madj:disabled{opacity:.3}
 .meter .val small{font-size:.26em;color:var(--warn);margin-left:.15em}
 .meter .sub{font-family:'IBM Plex Mono';font-size:.72rem;color:var(--kies)}
 .meter .sub2{font-family:'IBM Plex Mono';font-size:.66rem;color:#5f6468;margin-top:2px}
@@ -157,7 +161,11 @@ main{padding:12px 14px 30px}
 
 <section class="meter idle" id="meter">
   <div class="lab">Gelaufene Strecke</div>
-  <div class="val" id="dist">–<small>m</small></div>
+  <div class="valrow">
+    <button class="madj" id="mMinus" aria-label="Meter abziehen" disabled>−1</button>
+    <div class="val" id="dist">–<small>m</small></div>
+    <button class="madj" id="mPlus" aria-label="Meter hinzufügen" disabled>+1</button>
+  </div>
   <div class="sub" id="msub">Inspektion nicht gestartet</div>
   <div class="sub2" id="mair"></div>
 </section>
@@ -305,6 +313,9 @@ function hexRgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseIn
 let watchId=null,start=null,last=null,dist=0,acc=null,cur=null,back=false,zoom=1;
 let startPhoto=null,startTs=null,endPt=null,endTs=null,endDist=null;
 let startName='',endName='',pendingStartName='';
+let manualAdj=0,lastFixTs=null;
+/* effektive Meterzahl = GPS-Strecke + manuelle Korrektur (bis GPS neu springt) */
+function curM(){return closed()?endDist:Math.max(0,dist+manualAdj);}
 const ZOOMS=[1,2,.5,.25];let zi=0;
 let curCat=localStorage.getItem('gi2_c')||'schiene';
 if(!findCat(curCat))curCat='schiene';
@@ -327,7 +338,7 @@ let open=(JSON.parse(localStorage.getItem('gi2_o')||'[]')).map(o=>{if(!o.cat)o.c
 let route=JSON.parse(localStorage.getItem('gi2_r')||'null');
 if(route){start=route.start;dist=route.dist;last=route.last;startPhoto=route.photo||null;
   startTs=route.ts||null;endPt=route.endPt||null;endTs=route.endTs||null;endDist=route.endDist??null;
-  startName=route.startName||'';endName=route.endName||'';}
+  startName=route.startName||'';endName=route.endName||'';manualAdj=route.manualAdj||0;}
 const MIN_MOVE=3,MAX_ACC=25;
 const closed=()=>!!endPt;
 
@@ -343,7 +354,7 @@ function save(){
     localStorage.setItem('gi2_m',JSON.stringify(marks));
     localStorage.setItem('gi2_o',JSON.stringify(open));
     localStorage.setItem('gi2_n',trackName);
-    const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist,startName,endName}:null;
+    const r=start?{start,dist,last,photo:startPhoto,ts:startTs,endPt,endTs,endDist,startName,endName,manualAdj}:null;
     localStorage.setItem('gi2_r',JSON.stringify(r));route=r;
     return true;
   }catch(e){
@@ -371,7 +382,7 @@ function shrink(file,max,q){
 
 /* ===== Auswertung (Squat = Hinweis, keine Automatik) ===== */
 function analyse(){
-  const total=closed()?endDist:dist;
+  const total=closed()?endDist:curM();
   const nR=Math.max(1,Math.ceil(total/RAIL));
   const sq={};
   marks.filter(m=>m.cat==='schiene'&&m.type==='sq').forEach(m=>{
@@ -408,18 +419,25 @@ function summaryRows(){
 function gps(){
   if(!navigator.geolocation){$('#acc').textContent='nicht verfügbar';$('#dot').className='dot bad';return;}
   watchId=navigator.geolocation.watchPosition(p=>{
+    const now=Date.now();
     acc=p.coords.accuracy;cur={lat:p.coords.latitude,lon:p.coords.longitude};
     $('#acc').textContent='±'+Math.round(acc)+' m';
     $('#dot').className='dot '+(acc<=MAX_ACC?'on':'bad');
     if(start&&last&&!closed()&&acc<=MAX_ACC){
+      const gap=lastFixTs==null?Infinity:now-lastFixTs;
       const d=hav(last,cur);
-      if(d>=MIN_MOVE){
+      if(gap>8000){
+        /* Nach Standby/Pause (oder erstem Fix): Position neu referenzieren, nicht zählen */
+        last=cur;
+      }else if(d>=MIN_MOVE){
         const wasAir=hav(start,last),nowAir=hav(start,cur);
         if(nowAir<wasAir-1){dist=Math.max(0,dist-d);back=true;}
         else{dist+=d;back=false;}
+        manualAdj=0;               // echter GPS-Sprung -> manuelle Korrektur verwerfen
         last=cur;save();
       }
     }
+    lastFixTs=now;
     render();
   },e=>{
     $('#acc').textContent='Fehler';$('#dot').className='dot bad';
@@ -467,7 +485,7 @@ function padState(){
     const n=marks.filter(m=>m.cat===c&&m.type===tid&&m.side===side).length;
     b.classList.toggle('run',!!run);
     b.querySelector('.lbl').textContent=t.mode==='r'?(run?t.n+' Ende':t.n+' Start'):t.n;
-    b.querySelector('.cnt').textContent=run?Math.max(0,dist-run.dist).toFixed(0)+'m':(n||'');
+    b.querySelector('.cnt').textContent=run?Math.max(0,curM()-run.dist).toFixed(0)+'m':(n||'');
   });
 }
 
@@ -568,28 +586,28 @@ async function hit(catId,tid,side){
   if(!start||closed())return;
   if(!cur){toast('Kein GPS-Fix');return;}
   const cat=findCat(catId),t=findType(catId,tid);
+  const at=curM();
 
   /* Schienenhöhe: Zahl eingeben statt Maßnahme */
   if(t.special==='sh'){
     const v=(prompt('Schienenhöhe in mm, z.B. 154:')||'').trim();
     if(!v)return;
-    addMark({cat:catId,type:tid,side,dist,len:0,val:v,mm:{fix:'SH = '+v,col:'#8b9094',kind:'info'}});
-    toast('Schienenhöhe '+v+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');
+    addMark({cat:catId,type:tid,side,dist:at,len:0,val:v,mm:{fix:'SH = '+v,col:'#8b9094',kind:'info'}});
+    toast('Schienenhöhe '+v+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
     return;
   }
 
   /* Bauwerke: keine Maßnahme, stattdessen Bezeichnung als Info */
   if(catId==='bau'){
-    let name;
     if(tid==='free'){
-      name=(prompt('Bauwerk / Info eingeben:')||'').trim();
+      const name=(prompt('Bauwerk / Info eingeben:')||'').trim();
       if(!name)return;
-      const mF=addMark({cat:catId,type:'free',errText:name,side,dist,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
-      toast(name+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');askPhoto(mF);return;
+      const mF=addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
+      toast(name+' · '+sideLbl(side)+' · '+Math.round(at)+' m');askPhoto(mF);return;
     }
     const bez=(prompt(t.n+' – Bezeichnung (z.B. IVG 30):')||'').trim();
-    const mB=addMark({cat:catId,type:tid,errText:bez,side,dist,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
-    toast(t.n+(bez?' '+bez:'')+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');askPhoto(mB);return;
+    const mB=addMark({cat:catId,type:tid,errText:bez,side,dist:at,len:0,mm:{fix:'Info',col:cat.c,kind:'info'}});
+    toast(t.n+(bez?' '+bez:'')+' · '+sideLbl(side)+' · '+Math.round(at)+' m');askPhoto(mB);return;
   }
 
   /* Schienenband: Zustandsaufnahme, keine Maßnahme, kein Fotoprompt */
@@ -598,8 +616,8 @@ async function hit(catId,tid,side){
     if(tid==='free'){
       const name=(prompt('Freitext eingeben:')||'').trim();
       if(!name)return;
-      addMark({cat:catId,type:'free',errText:name,side,dist,len:0,mm});
-      toast(name+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');
+      addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm});
+      toast(name+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
       return;
     }
     if(t.mode==='r'){
@@ -608,10 +626,10 @@ async function hit(catId,tid,side){
       if(!run){
         let extra='';
         if(t.ask){extra=await bandAsk(t);if(extra===null)return;}
-        open.push({key:k,cat:catId,type:tid,side,dist,ts:new Date().toISOString(),extra:extra||''});
-        save();render();toast(t.n+(extra?' '+extra:'')+' offen ab '+Math.round(dist)+' m');
+        open.push({key:k,cat:catId,type:tid,side,dist:at,ts:new Date().toISOString(),extra:extra||''});
+        save();render();toast(t.n+(extra?' '+extra:'')+' offen ab '+Math.round(at)+' m');
       }else{
-        let len=dist-run.dist;if(len<2)len=2;
+        let len=at-run.dist;if(len<2)len=2;
         open=open.filter(o=>o.key!==k);
         addMark({cat:catId,type:tid,side,dist:run.dist,len,errText:run.extra||'',ts:run.ts,tsEnd:new Date().toISOString(),mm});
         toast(t.n+(run.extra?' '+run.extra:'')+' · '+len.toFixed(0)+' m');
@@ -620,8 +638,8 @@ async function hit(catId,tid,side){
     }
     let extra='';
     if(t.ask){extra=await bandAsk(t);if(extra===null)return;}
-    addMark({cat:catId,type:tid,side,dist,len:0,errText:extra||'',mm});
-    toast(t.n+(extra?' '+extra:'')+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');
+    addMark({cat:catId,type:tid,side,dist:at,len:0,errText:extra||'',mm});
+    toast(t.n+(extra?' '+extra:'')+' · '+sideLbl(side)+' · '+Math.round(at)+' m');
     return;
   }
 
@@ -629,7 +647,6 @@ async function hit(catId,tid,side){
   if(tid==='free'){
     const name=(prompt('Fehlerbeschreibung eingeben:')||'').trim();
     if(!name)return;
-    const at=dist;
     const mm=await chooseMeasure(catId,name+' · '+sideLbl(side));
     if(!mm)return;
     addMark({cat:catId,type:'free',errText:name,side,dist:at,len:0,mm});
@@ -639,7 +656,6 @@ async function hit(catId,tid,side){
 
   const k=keyOf(catId,tid,side);
   if(t.mode==='p'){
-    const at=dist;
     const mm=await chooseMeasure(catId,t.n+' · '+sideLbl(side));
     if(!mm)return;
     addMark({cat:catId,type:tid,side,dist:at,len:0,mm});
@@ -652,10 +668,10 @@ async function hit(catId,tid,side){
   if(!run){
     let ph=null;
     if(confirm('Foto vom Mangel aufnehmen?'))ph=await takePhoto();
-    open.push({key:k,cat:catId,type:tid,side,dist,ts:new Date().toISOString(),photo:ph||null});
-    save();render();toast(t.n+' offen ab '+Math.round(dist)+' m');
+    open.push({key:k,cat:catId,type:tid,side,dist:at,ts:new Date().toISOString(),photo:ph||null});
+    save();render();toast(t.n+' offen ab '+Math.round(at)+' m');
   }else{
-    let len=dist-run.dist;
+    let len=at-run.dist;
     if(len<2)len=2;   // GPS erfasst kurze Fehler oft nicht -> Standard 2 m
     const mm=await chooseMeasure(catId,t.n+' · '+sideLbl(side)+' · '+len.toFixed(0)+' m');
     if(!mm)return;
@@ -676,7 +692,8 @@ function computeTrack(W,zoomv){
   const xL=cx-gauge/2,xR=cx+gauge/2;
   const y=m=>PAD_T+(m/span)*(H-PAD_T-PAD_B);
   const nF=Math.max(1,Math.ceil(span/RAIL));
-  const xOf=s=>s==='links'?xL:s==='rechts'?xR:cx;
+  const xOf=s=>s==='links'?xR:s==='rechts'?xL:cx;   // ab Start betrachtet: links = im Bild rechts
+  const sgn=s=>s==='links'?1:(s==='rechts'?-1:0);     // Außenrichtung (+ = nach rechts im Bild)
 
   // Feldfarbe = schärfste Maßnahme im Feld (Bauwerke/Info zählen nicht)
   const fld={};
@@ -730,7 +747,7 @@ function computeTrack(W,zoomv){
     }
     /* Schienenhöhe: seitlicher Strich von der Schiene weg + SH-Wert */
     if(m.type==='sh'){
-      const rx=m.side==='rechts'?xR:xL,dir=m.side==='rechts'?1:-1,ex=rx+dir*20;
+      const rx=xOf(m.side),dir=sgn(m.side),ex=rx+dir*20;
       fx+=`<g class="mk" data-i="${i}">
         <line x1="${rx}" y1="${y1}" x2="${ex}" y2="${y1}" stroke="#8b9094" stroke-width="2"/>
         <text x="${ex+dir*3}" y="${y1+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7.5" font-weight="700" fill="#8b9094">SH ${esc(m.val||'')}</text></g>`;
@@ -738,18 +755,18 @@ function computeTrack(W,zoomv){
     }
     /* ===== Schienenband-Symbole ===== */
     if(m.cat==='band'){
-      const bx=xOf(m.side),dir=m.side==='rechts'?1:-1;
+      const bx=xOf(m.side),dir=sgn(m.side);
       const nm=m.errText?esc(clipS(m.errText,14)):'';
       const yb=Math.max(y2,y1+4);
       if(m.type==='mast'){
-        const mx=m.side==='rechts'?xR+13:xL-13;
+        const mx=xOf(m.side)+dir*13;
         fx+=`<g class="mk" data-i="${i}">
           <rect x="${mx-2.5}" y="${y1-7}" width="5" height="14" fill="#8b9094"/>
           <text x="${mx+dir*5}" y="${y1+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7" fill="#8b9094">Mast${nm?' '+nm:''}</text></g>`;
         return;
       }
       if(m.type==='schutz'){
-        const sx=m.side==='rechts'?xR-8:xL+8;
+        const sx=xOf(m.side)-dir*8;
         fx+=`<g class="mk" data-i="${i}"><line x1="${sx}" y1="${y1}" x2="${sx}" y2="${yb}" stroke="#8b9094" stroke-width="4"/></g>`;
         return;
       }
@@ -766,7 +783,7 @@ function computeTrack(W,zoomv){
         return;
       }
       if(m.type==='form'){
-        const fx0=m.side==='rechts'?xR+6:xL-6;
+        const fx0=xOf(m.side)+dir*6;
         fx+=`<g class="mk" data-i="${i}">
           <line x1="${fx0}" y1="${y1}" x2="${fx0}" y2="${yb}" stroke="#8b9094" stroke-width="2"/>
           <text x="${fx0+dir*3}" y="${(y1+yb)/2+3}" text-anchor="${dir>0?'start':'end'}" font-family="monospace" font-size="7.5" font-weight="700" fill="#8b9094">${nm||'?'}</text></g>`;
@@ -804,26 +821,26 @@ function computeTrack(W,zoomv){
     }
   });
   open.forEach(o=>{
-    const cc=findCat(o.cat).c,x=xOf(o.side);
-    const y1=y(o.dist),y2=y(Math.min(dist,span));
+    const cc=findCat(o.cat).c,x=xOf(o.side),os=sgn(o.side);
+    const y1=y(o.dist),y2=y(Math.min(curM(),span));
     fx+=`<line x1="${x}" y1="${y1}" x2="${x}" y2="${Math.max(y2,y1+3)}" stroke="${cc}" stroke-width="10" opacity=".45" stroke-dasharray="5 4"/>
       <line x1="${x-8}" y1="${y1}" x2="${x+8}" y2="${y1}" stroke="${cc}" stroke-width="2.5"/>
-      <text class="mk-lbl" x="${o.side==='rechts'?x+11:x-11}" y="${y1-8}" text-anchor="${o.side==='rechts'?'start':'end'}" fill="${cc}">OFFEN</text>`;
+      <text class="mk-lbl" x="${x+(os||-1)*11}" y="${y1-8}" text-anchor="${os>0?'start':'end'}" fill="${cc}">OFFEN</text>`;
   });
 
   let mk=`<line x1="${xL-16}" y1="${PAD_T}" x2="${xR+16}" y2="${PAD_T}" stroke="var(--gruen)" stroke-width="3"/>
     <text class="rail-lbl" x="${xR+21}" y="${PAD_T+3}" fill="#3fa34d">START</text>
-    <text class="rail-lbl" x="${xL}" y="13" text-anchor="middle">LINKS</text>
-    <text class="rail-lbl" x="${xR}" y="13" text-anchor="middle">RECHTS</text>`;
+    <text class="rail-lbl" x="${xL}" y="13" text-anchor="middle">RECHTS</text>
+    <text class="rail-lbl" x="${xR}" y="13" text-anchor="middle">LINKS</text>`;
   if(closed()){
     const ye=y(endDist);
     mk+=`<line x1="${xL-16}" y1="${ye}" x2="${xR+16}" y2="${ye}" stroke="var(--signal)" stroke-width="3"/>
       <text class="rail-lbl" x="${xR+21}" y="${ye+3}" fill="#e0243b">ENDE ${Math.round(endDist)} M</text>`;
   }else{
-    const yp=y(Math.min(dist,span));
+    const yp=y(Math.min(curM(),span));
     mk+=`<line x1="${xL-16}" y1="${yp}" x2="${xR+16}" y2="${yp}" stroke="var(--kalk)" stroke-width="2" stroke-dasharray="4 3"/>
       <circle cx="${cx}" cy="${yp}" r="5" fill="var(--kalk)"/>
-      <text class="rail-lbl" x="${xR+21}" y="${yp+3}" fill="#e8e6e1">${Math.round(dist)} M</text>`;
+      <text class="rail-lbl" x="${xR+21}" y="${yp+3}" fill="#e8e6e1">${Math.round(curM())} M</text>`;
   }
   return {inner:sl+jt+tk+rails+fx+mk,W,H,rows,fld,total,nR};
 }
@@ -872,13 +889,14 @@ function render(){
   const m=$('#meter');
   if(start){
     m.classList.remove('idle');
-    $('#dist').innerHTML=Math.round(closed()?endDist:dist)+'<small>m</small>';
+    $('#dist').innerHTML=Math.round(curM())+'<small>m</small>';
     const nBef=marks.filter(m=>!isInfoMark(m)).length;
     $('#msub').textContent=closed()
       ? 'Abgeschlossen · '+Math.round(endDist)+' m · '+nBef+' Befunde'
       : (acc?'GPS ±'+Math.round(acc)+' m · '+nBef+' Befunde':'Warte auf GPS…');
     const air=(start&&cur)?hav(start,cur):0;
-    $('#mair').textContent=closed()?'':'Luftlinie zum Start: '+Math.round(air)+' m'+(back?'  ·  rückwärts':'');
+    const adjTxt=(!closed()&&manualAdj)?'  ·  Korrektur '+(manualAdj>0?'+':'')+Math.round(manualAdj)+' m':'';
+    $('#mair').textContent=closed()?'':'Luftlinie zum Start: '+Math.round(air)+' m'+(back?'  ·  rückwärts':'')+adjTxt;
   }else{
     m.classList.add('idle');$('#dist').innerHTML='–<small>m</small>';
     $('#msub').textContent='Inspektion nicht gestartet';$('#mair').textContent='';
@@ -889,6 +907,8 @@ function render(){
   $('#bEndPt').className=closed()?'done':'';
   $('#bStart').textContent=start?'Verwerfen':'Start setzen';
   $('#bStart').className=start?'stop':'start';
+  const live=!!start&&!closed();
+  $('#mMinus').disabled=!live;$('#mPlus').disabled=!live;
   padState();
   drawTrack();
   drawOut();
@@ -952,7 +972,7 @@ $('#bStart').onclick=()=>{
     if(!confirm('Inspektion verwerfen? Alle Befunde und der Zähler werden gelöscht.'))return;
     start=null;last=null;dist=0;startPhoto=null;startTs=null;
     endPt=null;endTs=null;endDist=null;marks=[];open=[];
-    startName='';endName='';
+    startName='';endName='';manualAdj=0;lastFixTs=null;
     save();render();return;
   }
   if(!cur){toast('Noch kein GPS-Fix – kurz warten');return;}
@@ -985,11 +1005,18 @@ $('#bEndPt').onclick=()=>{
   }else{
     if(!confirm('Endpunkt bei '+Math.round(dist)+' m setzen?'))return;
   }
-  endPt=cur;endDist=dist;endTs=new Date().toISOString();
+  endPt=cur;endDist=curM();manualAdj=0;endTs=new Date().toISOString();
   save();render();toast('Abgeschlossen · '+Math.round(endDist)+' m');
 };
 $('#bZoom').onclick=()=>{zi=(zi+1)%ZOOMS.length;zoom=ZOOMS[zi];
   $('#bZoom').textContent=zoom>=1?zoom+':1':'1:'+(1/zoom);drawTrack();};
+function adjustMeter(delta){
+  if(!start||closed())return;
+  manualAdj=Math.max(-dist,manualAdj+delta);   // effektive Meter nie < 0
+  save();render();
+}
+$('#mMinus').onclick=()=>adjustMeter(-1);
+$('#mPlus').onclick=()=>adjustMeter(1);
 
 /* ===== PDF ===== */
 $('#bPdf').onclick=async()=>{
