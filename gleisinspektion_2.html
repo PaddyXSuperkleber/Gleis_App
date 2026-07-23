@@ -244,10 +244,11 @@ const CATS=[
     {id:'sig', n:'Signal',      mode:'p'},
     {id:'spr', n:'Sprechsäule', mode:'p'}
   ]},
-  {id:'band', n:'Schienenband', c:'#8b9094', sides:true, info:true, noFree:true, types:[
+  {id:'band', n:'Schienenband', c:'#8b9094', sides:true, info:true, types:[
     {id:'mast',  n:'Mast',          mode:'p', ask:'name'},
     {id:'schutz',n:'Schutzschiene', mode:'r'},
     {id:'bue',   n:'Bahnübergang',  mode:'r', fixed:'beide', ask:'name'},
+    {id:'schl',  n:'Schleife',      mode:'r', fixed:'beide'},
     {id:'form',  n:'Schienenform',  mode:'r', ask:'form'},
     {id:'erde',  n:'Erde',          mode:'p'},
     {id:'achs',  n:'Achszähler',    mode:'p', ask:'name'},
@@ -594,6 +595,13 @@ async function hit(catId,tid,side){
   /* Schienenband: Zustandsaufnahme, keine Maßnahme, kein Fotoprompt */
   if(catId==='band'){
     const mm={fix:'Info',col:cat.c,kind:'info'};
+    if(tid==='free'){
+      const name=(prompt('Freitext eingeben:')||'').trim();
+      if(!name)return;
+      addMark({cat:catId,type:'free',errText:name,side,dist,len:0,mm});
+      toast(name+' · '+sideLbl(side)+' · '+Math.round(dist)+' m');
+      return;
+    }
     if(t.mode==='r'){
       const k=keyOf(catId,tid,side);
       const run=open.find(o=>o.key===k);
@@ -752,6 +760,11 @@ function computeTrack(W,zoomv){
           <text x="${cx}" y="${(y1+yb)/2+3}" text-anchor="middle" font-family="monospace" font-size="7" fill="#4f5356">BÜ${nm?' '+nm:''}</text></g>`;
         return;
       }
+      if(m.type==='schl'){
+        const bw=gauge-10;
+        fx+=`<g class="mk" data-i="${i}"><rect x="${cx-bw/2}" y="${y1}" width="${bw}" height="${Math.max(yb-y1,5)}" fill="none" stroke="#6f7679" stroke-width="1.5"/></g>`;
+        return;
+      }
       if(m.type==='form'){
         const fx0=m.side==='rechts'?xR+6:xL-6;
         fx+=`<g class="mk" data-i="${i}">
@@ -770,9 +783,9 @@ function computeTrack(W,zoomv){
       if(m.type==='iso'){
         const w=7;
         fx+=`<g class="mk" data-i="${i}">
-          <line x1="${bx-w}" y1="${y1-w}" x2="${bx+w}" y2="${y1-w}" stroke="#111111" stroke-width="2"/>
-          <line x1="${bx+w}" y1="${y1-w}" x2="${bx-w}" y2="${y1+w}" stroke="#111111" stroke-width="2"/>
-          <line x1="${bx-w}" y1="${y1+w}" x2="${bx+w}" y2="${y1+w}" stroke="#111111" stroke-width="2"/></g>`;
+          <line x1="${bx-w}" y1="${y1-w}" x2="${bx+w}" y2="${y1-w}" stroke="#e0243b" stroke-width="2"/>
+          <line x1="${bx+w}" y1="${y1-w}" x2="${bx-w}" y2="${y1+w}" stroke="#e0243b" stroke-width="2"/>
+          <line x1="${bx-w}" y1="${y1+w}" x2="${bx+w}" y2="${y1+w}" stroke="#e0243b" stroke-width="2"/></g>`;
         return;
       }
       return;
